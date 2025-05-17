@@ -14,13 +14,13 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(required=False)
     id_card_picture = serializers.ImageField(required=False)
     terms_agreed = serializers.CharField(required=True)
-
+    full_name=serializers.CharField(required=True)
     class Meta:
         model = ProjectOwner
         fields = [
             'username', 'email', 'password', 'phone_number',
             'bio', 'company_name', 'profile_picture',
-            'id_card_picture', 'terms_agreed'
+            'id_card_picture', 'terms_agreed','full_name'
         ]
 
     def create(self, validated_data):
@@ -32,6 +32,7 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
                     password=validated_data['password'],
                     role='owner',
                     phone_number=validated_data['phone_number'],
+                    full_name=validated_data['full_name'],
                     is_active=False
                 )
 

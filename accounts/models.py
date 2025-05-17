@@ -9,7 +9,7 @@ class User(AbstractUser):
         ('investor', 'Investor'),
         ('owner', 'Project Owner'),
     )
-
+    full_name=models.CharField(max_length=150, unique=True)  
     username = models.CharField(max_length=150, unique=True)  
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128)  
