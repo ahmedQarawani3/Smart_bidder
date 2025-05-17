@@ -12,7 +12,6 @@ User = get_user_model()
 class ProjectOwner(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='project_owner_profile')
     bio = models.TextField(blank=True)
-    company_name = models.CharField(max_length=255, blank=True)
     profile_picture = models.ImageField(upload_to='owners/', blank=True, null=True)
     id_card_picture = models.ImageField(upload_to='owners/id_cards/', blank=True, null=True)  
     terms_agreed = models.TextField(blank=True)  

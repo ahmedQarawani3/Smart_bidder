@@ -10,7 +10,6 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     phone_number = serializers.CharField(max_length=20)
     bio = serializers.CharField(allow_blank=True)
-    company_name = serializers.CharField(max_length=255)
     profile_picture = serializers.ImageField(required=False)
     id_card_picture = serializers.ImageField(required=False)
     terms_agreed = serializers.CharField(required=True)
@@ -19,7 +18,7 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
         model = ProjectOwner
         fields = [
             'username', 'email', 'password', 'phone_number',
-            'bio', 'company_name', 'profile_picture',
+            'bio',  'profile_picture',
             'id_card_picture', 'terms_agreed','full_name'
         ]
 
@@ -39,7 +38,6 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
                 owner = ProjectOwner.objects.create(
                     user=user,
                     bio=validated_data.get('bio', ''),
-                    company_name=validated_data.get('company_name', ''),
                     profile_picture=validated_data.get('profile_picture'),
                     id_card_picture=validated_data.get('id_card_picture'),
                     terms_agreed=validated_data.get('terms_agreed', '')
