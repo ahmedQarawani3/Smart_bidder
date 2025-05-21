@@ -1,7 +1,7 @@
-from rest_framework import serializers
 from .models import Project, ProjectFile,FeasibilityStudy
 from rest_framework import serializers
-from .models import Project
+from investor.models import InvestmentOffer
+
 class ProjectFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectFile
@@ -54,9 +54,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         return project
 
 
-#عرض المشاريع الخاصه بي
-from rest_framework import serializers
-from .models import Project
+
 
 class ProjectStatusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,29 +62,47 @@ class ProjectStatusSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'status', 'created_at', 'updated_at']
 
 
-#عرض العروض المقدمه لصاحب المشروع
-from rest_framework import serializers
-from investor.models import InvestmentOffer  # حسب مكان الملف عندك
-
 class InvestmentOfferSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvestmentOffer
         fields = ['id', 'amount', 'equity_percentage', 'additional_terms', 'status', 'created_at']
 
-#فلتره العروض حسب معايير معينه
-from rest_framework import serializers
-from investor.models import InvestmentOffer
 
-class InvestmentOfferSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = InvestmentOffer
-        fields = ['id', 'amount', 'equity_percentage', 'additional_terms', 'status', 'created_at']
-
-from rest_framework import serializers
-from investor.models import InvestmentOffer
-#قبول ورفض عرض استثماري
 
 class OfferStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvestmentOffer
         fields = ['id', 'status']
+
+# serializers.py
+from rest_framework import serializers
+from .models import ProjectOwner
+
+class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.full_name', required=False)
+    email = serializers.EmailField(source='user.email', required=False)
+    phone_number = serializers.CharField(source='user.phone_number', required=False)
+
+    class Meta:
+        model = ProjectOwner
+        fields = [
+            'full_name',
+            'email',
+            'phone_number',
+            'bio',
+            'profile_picture',
+            'id_card_picture'
+        ]
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
+
+        # تحديث بيانات ProjectOwner نفسه
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance

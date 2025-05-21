@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import CreateProjectView,MyProjectStatusView,MyProjectOffersView,FilteredOffersView,UpdateOfferStatusView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .views import UpdateProjectOwnerProfileView
 
 urlpatterns = [
     path('projectowner/projects/add/', CreateProjectView.as_view(), name='add-project'),
@@ -10,6 +11,7 @@ urlpatterns = [
     path('my-projects/offers/', MyProjectOffersView.as_view(), name='my-project-offers'),
     path('my-projects/offers/filter/', FilteredOffersView.as_view(), name='filtered-offers'),
     path('offers/<int:offer_id>/update-status/', UpdateOfferStatusView.as_view(), name='update-offer-status'),
+    path('project-owner/update-profile/', UpdateProjectOwnerProfileView.as_view(), name='update-project-owner-profile'),
 
 
 ]

@@ -31,21 +31,23 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'rest_framework',
     'accounts',
     'investor',
     'projectOwner',
     'rest_framework_simplejwt',
     'corsheaders',
-
-
 ]
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  
@@ -84,13 +86,14 @@ WSGI_APPLICATION = 'smartbidder.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'smartbidder1',
+        'NAME': 'railway',
         'USER': 'postgres',
-        'PASSWORD': 'ahmad123654',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'PASSWORD': 'fYHErXRICoEVhEGJfGaZVJExlxEhDIae',
+        'HOST': 'caboose.proxy.rlwy.net',
+        'PORT': '59507',
     }
 }
+
 
 
 # Password validation

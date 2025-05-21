@@ -1,36 +1,31 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions
 from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 from django.shortcuts import get_object_or_404
-from .models import Project, ProjectOwner
 from .serializer import ProjectSerializer
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework import generics, permissions
+from .serializer import ProjectStatusSerializer
+from .serializer import ProjectOwnerUpdateSerializer
+from rest_framework import generics, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import ProjectOwner, Project
+from .serializer import InvestmentOfferSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from investor.models import InvestmentOffer
-from rest_framework import status
-from rest_framework import generics, permissions
-from .models import Project
-from .serializer import ProjectStatusSerializer
-from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
-from .models import ProjectOwner, Project
-from investor.models import InvestmentOffer  # حسب مكان الملف
-from .serializer import InvestmentOfferSerializer
+from rest_framework import status
+from investor.models import InvestmentOffer
+from .serializer import OfferStatusUpdateSerializer
+
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def perform_create(self, serializer):
-        if not self.request.user.is_authenticated:
-            raise AuthenticationFailed('User is not authenticated')
-
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         serializer.save(owner=owner)
-from rest_framework.permissions import IsAuthenticated
 
-    
 
 #عرض المشاريع الخاصه بي
 class MyProjectStatusView(generics.ListAPIView):
@@ -38,7 +33,6 @@ class MyProjectStatusView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # نحصل على كائن ProjectOwner المرتبط بالمستخدم
         project_owner = ProjectOwner.objects.get(user=self.request.user)
         return Project.objects.filter(owner=project_owner)
 
@@ -55,13 +49,7 @@ class MyProjectOffersView(generics.ListAPIView):
         # جلب كل العروض المرتبطة بهذه المشاريع
         return InvestmentOffer.objects.filter(project__in=owner_projects)
 #فلتره العروض 
-# projectOwner/views.py
-from rest_framework import generics, filters
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from .models import ProjectOwner, Project
-from investor.models import InvestmentOffer
-from .serializer import InvestmentOfferSerializer
+
 
 class FilteredOffersView(generics.ListAPIView):
     serializer_class = InvestmentOfferSerializer
@@ -79,12 +67,7 @@ class FilteredOffersView(generics.ListAPIView):
         owner_projects = Project.objects.filter(owner=project_owner)
         return InvestmentOffer.objects.filter(project__in=owner_projects)
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from investor.models import InvestmentOffer
-from .serializer import OfferStatusUpdateSerializer
+
 #قبول ورفض عرض استثماري
 class UpdateOfferStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -116,3 +99,13 @@ class UpdateOfferStatusView(APIView):
         offer.save()
 
         return Response({'message': f'Offer has been {new_status.lower()}'}, status=200)
+
+
+
+class UpdateProjectOwnerProfileView(generics.UpdateAPIView):
+    queryset = ProjectOwner.objects.all()
+    serializer_class = ProjectOwnerUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.project_owner_profile
