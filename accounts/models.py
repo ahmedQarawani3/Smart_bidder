@@ -15,7 +15,7 @@ class User(AbstractUser):
     password = models.CharField(max_length=128)  
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     language_preference = models.CharField(max_length=10, default='ar')
-    phone_number = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20)  
     created_at = models.DateTimeField(default=timezone.now)  
     updated_at = models.DateTimeField(null=True, blank=True)
 

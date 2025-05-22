@@ -7,10 +7,18 @@ from projectOwner.models import Project
 
 class Investor(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    company_name = models.CharField(max_length=255)
-    commercial_register = models.CharField(max_length=100)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    commercial_register = models.CharField(max_length=100, blank=True, null=True)
     phone_number = models.CharField(max_length=20)
     profile_picture = models.ImageField(upload_to='investors/', blank=True, null=True)
+    id_card_picture = models.ImageField(upload_to='investors/id_cards/', blank=True, null=True)
+
+    def clean(self):
+        if not self.commercial_register and not self.id_card_picture:
+            raise ValidationError("If commercial register is not provided, a personal ID card picture is required.")
+
+    def __str__(self):
+        return f"Investor: {self.user.username}"
 
 
 class InvestmentOffer(models.Model):

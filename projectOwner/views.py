@@ -109,3 +109,27 @@ class UpdateProjectOwnerProfileView(generics.UpdateAPIView):
 
     def get_object(self):
         return self.request.user.project_owner_profile
+
+# accounts/views.py
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .serializer import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+
+class PasswordResetRequestView(APIView):
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "تم تغيير كلمة المرور بنجاح."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
