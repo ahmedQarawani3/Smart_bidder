@@ -98,6 +98,11 @@ from .models import ProjectOwner
 from rest_framework import serializers
 from .models import ProjectOwner
 
+# serializers.py
+
+from rest_framework import serializers
+from .models import ProjectOwner, Project, FeasibilityStudy
+
 class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', required=False)
     email = serializers.EmailField(source='user.email', required=False)
@@ -127,16 +132,6 @@ class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-
-
-
-
-from rest_framework import serializers
-from .models import Project, FeasibilityStudy
-
-from rest_framework import serializers
-from .models import Project, FeasibilityStudy
-
 class FeasibilityStudySerializer(serializers.ModelSerializer):
     class Meta:
         model = FeasibilityStudy
@@ -151,6 +146,7 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
             "growth_opportunity",
             "created_at",
         ]
+
 
 class ProjectDetailsSerializer(serializers.ModelSerializer):
     feasibility_study = FeasibilityStudySerializer(read_only=True)
