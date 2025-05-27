@@ -16,7 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from investor.models import InvestmentOffer
 from .serializer import OfferStatusUpdateSerializer
-
+#create project
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -25,6 +25,7 @@ class CreateProjectView(generics.CreateAPIView):
     def perform_create(self, serializer):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         serializer.save(owner=owner)
+
 
 
 #عرض المشاريع الخاصه بي
@@ -99,37 +100,40 @@ class UpdateOfferStatusView(APIView):
         offer.save()
 
         return Response({'message': f'Offer has been {new_status.lower()}'}, status=200)
-
-
-
-class UpdateProjectOwnerProfileView(generics.UpdateAPIView):
-    queryset = ProjectOwner.objects.all()
+#update and get profile
+class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ProjectOwnerUpdateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
         return self.request.user.project_owner_profile
 
-# accounts/views.py
+from rest_framework import generics, permissions
+from .models import Project
+from .serializer import ProjectDetailsSerializer
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from .serializer import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+from rest_framework import generics, permissions
+from .models import Project
+from .serializer import ProjectDetailsSerializer
 
-class PasswordResetRequestView(APIView):
-    def post(self, request):
-        serializer = PasswordResetRequestSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# عرض مشاريع المستخدم (مالك المشروع)
+from rest_framework import generics, permissions
+from .models import Project
+
+class MyProjectsListView(generics.ListAPIView):
+    serializer_class = ProjectDetailsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Project.objects.filter(owner__user=self.request.user)
 
 
-class PasswordResetConfirmView(APIView):
-    def post(self, request):
-        serializer = PasswordResetConfirmSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "تم تغيير كلمة المرور بنجاح."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# تعديل مشروع معيّن (اختياري)
+class MyProjectUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectDetailsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Project.objects.filter(owner__user=self.request.user)
+

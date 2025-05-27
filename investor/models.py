@@ -36,9 +36,7 @@ class InvestmentOffer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-# models.py
 
-# models.py
 
 from django.db import models
 from django.conf import settings

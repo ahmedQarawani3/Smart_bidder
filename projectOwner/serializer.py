@@ -16,42 +16,59 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
     files = ProjectFileSerializer(many=True, write_only=True, required=False)
-    feasibility_study = FeasibilityStudySerializer(required=False)
+    feasibility_study = FeasibilityStudySerializer(required=True)
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'idea_summary', 'problem_solving',
-            'category', 'readiness_level', 'files', 'feasibility_study','status'
+            'category', 'readiness_level', 'files', 'feasibility_study', 'status'
         ]
 
     def validate(self, data):
-        readiness = data.get('readiness_level')
-        feasibility_data = data.get('feasibility_study')
+        feasibility_data = data.get('feasibility_study', {})
+        readiness_level = data.get('readiness_level')
 
-        # إذا المشروع "فكرة" فلا حاجة لإدخال بيانات الجدوى
-        if readiness == 'idea' and feasibility_data:
-            raise serializers.ValidationError("No feasibility study is required for idea-level projects.")
-        
-        # إذا المشروع أكثر من فكرة ولم تُرفق الجدوى
-        if readiness in ['prototype', 'existing'] and not feasibility_data:
-            raise serializers.ValidationError("Feasibility study is required for prototype or existing projects.")
-        
+        required_fields = [
+            'funding_required',
+            'marketing_investment_percentage',
+            'team_investment_percentage',
+            'expected_monthly_revenue',
+            'roi_period_months',
+            'expected_profit_margin',
+            'growth_opportunity',
+        ]
+
+        if not feasibility_data:
+            raise serializers.ValidationError({'feasibility_study': 'This field is required.'})
+
+        for field in required_fields:
+            if not feasibility_data.get(field):
+                raise serializers.ValidationError({
+                    'feasibility_study': f'The field {field} is required.'
+                })
+
+        if readiness_level != 'idea':
+            if feasibility_data.get('current_revenue') in [None, '']:
+                raise serializers.ValidationError({
+                    'feasibility_study': 'The field current_revenue is required because the project is not just an idea.'
+                })
+
         return data
 
     def create(self, validated_data):
         files_data = validated_data.pop('files', [])
-        feasibility_data = validated_data.pop('feasibility_study', None)
+        feasibility_data = validated_data.pop('feasibility_study')
 
         project = Project.objects.create(**validated_data)
 
         for file_data in files_data:
             ProjectFile.objects.create(project=project, **file_data)
 
-        if feasibility_data:
-            FeasibilityStudy.objects.create(project=project, **feasibility_data)
+        FeasibilityStudy.objects.create(project=project, **feasibility_data)
 
         return project
+
 
 
 
@@ -78,6 +95,9 @@ class OfferStatusUpdateSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 from .models import ProjectOwner
 
+from rest_framework import serializers
+from .models import ProjectOwner
+
 class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', required=False)
     email = serializers.EmailField(source='user.email', required=False)
@@ -101,67 +121,52 @@ class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
             setattr(user, attr, value)
         user.save()
 
-        # تحديث بيانات ProjectOwner نفسه
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         return instance
 
 
-# accounts/serializers.py
 
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.contrib.auth import get_user_model
-from django.utils.encoding import smart_bytes, smart_str, force_str, DjangoUnicodeDecodeError
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+
+
+
 from rest_framework import serializers
-from django.core.mail import send_mail
-from django.conf import settings
+from .models import Project, FeasibilityStudy
 
-User = get_user_model()
+from rest_framework import serializers
+from .models import Project, FeasibilityStudy
 
-class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+class FeasibilityStudySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeasibilityStudy
+        fields = [
+            "current_revenue",
+            "funding_required",
+            "marketing_investment_percentage",
+            "team_investment_percentage",
+            "expected_monthly_revenue",
+            "roi_period_months",
+            "expected_profit_margin",
+            "growth_opportunity",
+            "created_at",
+        ]
 
-    def validate_email(self, value):
-        if not User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("هذا البريد الإلكتروني غير مسجل.")
-        return value
+class ProjectDetailsSerializer(serializers.ModelSerializer):
+    feasibility_study = FeasibilityStudySerializer(read_only=True)
 
-    def save(self):
-        email = self.validated_data['email']
-        user = User.objects.get(email=email)
-        uid = urlsafe_base64_encode(smart_bytes(user.id))
-        token = PasswordResetTokenGenerator().make_token(user)
-        reset_link = f"http://localhost:8000/api/password-reset-confirm/?uid={uid}&token={token}"
-
-        send_mail(
-            subject='إعادة تعيين كلمة المرور',
-            message=f'اضغط على الرابط التالي لإعادة تعيين كلمة المرور:\n{reset_link}',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-        )
-
-
-class PasswordResetConfirmSerializer(serializers.Serializer):
-    uid = serializers.CharField()
-    token = serializers.CharField()
-    new_password = serializers.CharField(min_length=8)
-
-    def validate(self, attrs):
-        try:
-            uid = force_str(urlsafe_base64_decode(attrs['uid']))
-            user = User.objects.get(id=uid)
-        except (DjangoUnicodeDecodeError, User.DoesNotExist):
-            raise serializers.ValidationError("الرابط غير صالح أو المستخدم غير موجود.")
-
-        if not PasswordResetTokenGenerator().check_token(user, attrs['token']):
-            raise serializers.ValidationError("رمز إعادة التعيين غير صالح أو منتهي الصلاحية.")
-
-        attrs['user'] = user
-        return attrs
-
-    def save(self):
-        user = self.validated_data['user']
-        user.set_password(self.validated_data['new_password'])
-        user.save()
+    class Meta:
+        model = Project
+        fields = [
+            "id",
+            "title",
+            "description",
+            "status",
+            "category",
+            "readiness_level",
+            "idea_summary",
+            "problem_solving",
+            "created_at",
+            "updated_at",
+            "feasibility_study",
+        ]

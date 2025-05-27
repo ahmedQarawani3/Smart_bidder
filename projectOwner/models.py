@@ -24,6 +24,7 @@ class ProjectOwner(models.Model):
 class Project(models.Model):
     STATUS_CHOICES = (
         ('active', 'Active'),
+        ('under_negotiation', 'Under Negotiation'),
         ('closed', 'Closed'),
     )
 
@@ -52,12 +53,13 @@ class Project(models.Model):
     readiness_level = models.CharField(max_length=50, choices=READINESS_CHOICES, null=True, blank=True)#11111
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return f"Project Owner: {self.title}"
 
 
 class FeasibilityStudy(models.Model):
     project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name='feasibility_study')
     
-    current_stage = models.CharField(max_length=255)  # مثل: فكرة، نموذج أولي، مشروع قائم
     current_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # الإيرادات الحالية بالدولار
     funding_required = models.DecimalField(max_digits=12, decimal_places=2)  # التمويل المطلوب بالدولار
 
@@ -67,7 +69,6 @@ class FeasibilityStudy(models.Model):
     expected_monthly_revenue = models.CharField(max_length=255)  # الإيرادات الشهرية المتوقعة
     roi_period_months = models.PositiveIntegerField()  # عدد الأشهر لاسترداد رأس المال
     expected_profit_margin = models.CharField(max_length=255)  # هامش الربح المتوقع
-    market_size = models.CharField(max_length=255)  # حجم السوق المتوقع
     growth_opportunity = models.TextField()  # وصف لفرصة النمو
     created_at = models.DateTimeField(auto_now_add=True)
 
