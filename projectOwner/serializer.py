@@ -132,10 +132,12 @@ class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+# serializers.py
 class FeasibilityStudySerializer(serializers.ModelSerializer):
     class Meta:
         model = FeasibilityStudy
         fields = [
+            'id',
             "current_revenue",
             "funding_required",
             "marketing_investment_percentage",
@@ -144,25 +146,35 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
             "roi_period_months",
             "expected_profit_margin",
             "growth_opportunity",
-            "created_at",
         ]
 
 
 class ProjectDetailsSerializer(serializers.ModelSerializer):
-    feasibility_study = FeasibilityStudySerializer(read_only=True)
+    feasibility_study = FeasibilityStudySerializer()
 
     class Meta:
         model = Project
         fields = [
-            "id",
-            "title",
-            "description",
-            "status",
-            "category",
-            "readiness_level",
-            "idea_summary",
-            "problem_solving",
-            "created_at",
-            "updated_at",
+            "id", "title", "description", "status",
+            "category", "readiness_level", "idea_summary",
+            "problem_solving", "created_at", "updated_at",
             "feasibility_study",
         ]
+
+    def update(self, instance, validated_data):
+        feasibility_data = validated_data.pop('feasibility_study', None)
+
+        # تحديث بيانات المشروع
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # تحديث بيانات دراسة الجدوى
+        if feasibility_data:
+            feasibility_instance = instance.feasibility_study
+            for attr, value in feasibility_data.items():
+                setattr(feasibility_instance, attr, value)
+            feasibility_instance.save()
+
+        return instance
+
