@@ -1,7 +1,10 @@
 from .models import Project, ProjectFile,FeasibilityStudy
 from rest_framework import serializers
 from investor.models import InvestmentOffer
-
+from rest_framework import serializers
+from .models import ProjectOwner
+from rest_framework import serializers
+from .models import ProjectOwner
 class ProjectFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectFile
@@ -73,10 +76,6 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 
-class ProjectStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = ['id', 'title', 'status', 'created_at', 'updated_at']
 
 
 class InvestmentOfferSerializer(serializers.ModelSerializer):
@@ -91,14 +90,6 @@ class OfferStatusUpdateSerializer(serializers.ModelSerializer):
         model = InvestmentOffer
         fields = ['id', 'status']
 
-# serializers.py
-from rest_framework import serializers
-from .models import ProjectOwner
-
-from rest_framework import serializers
-from .models import ProjectOwner
-
-# serializers.py
 
 from rest_framework import serializers
 from .models import ProjectOwner, Project, FeasibilityStudy
@@ -177,4 +168,42 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             feasibility_instance.save()
 
         return instance
+
+# serializers.py
+
+from rest_framework import serializers
+
+class ProjectOwnerDashboardSerializer(serializers.Serializer):
+    active_projects_count = serializers.IntegerField()
+    total_funding_required = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_investors_connected = serializers.IntegerField()
+    pending_offers = serializers.IntegerField()
+# projects/serializers.py
+from rest_framework import serializers
+from .models import Project, FeasibilityStudy
+from investor.models import Investor
+from investor.models import InvestmentOffer
+
+class ProjectListSerializer(serializers.ModelSerializer):
+    funding_required = serializers.SerializerMethodField()
+    funding_achieved = serializers.SerializerMethodField()
+    investor_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'title', 'description', 'status', 'category', 'readiness_level',
+            'funding_required', 'funding_achieved', 'investor_count'
+        ]
+
+    def get_funding_required(self, obj):
+        return getattr(obj.feasibility_study, 'funding_required', 0)
+
+    def get_funding_achieved(self, obj):
+        return InvestmentOffer.objects.filter(project=obj, status='accepted') \
+            .aggregate(total=models.Sum('amount'))['total'] or 0
+
+    def get_investor_count(self, obj):
+        return InvestmentOffer.objects.filter(project=obj, status='accepted') \
+            .values('investor').distinct().count()
 

@@ -49,12 +49,16 @@ class ProjectOwnerRegisterSerializer(serializers.ModelSerializer):
 
 
 
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    role = serializers.CharField(read_only=True)  # ما في داعي نخليه required من المستخدم
 
     def validate(self, data):
-
         user = authenticate(
             username=data['username'],
             password=data['password']
@@ -64,10 +68,12 @@ class LoginSerializer(serializers.Serializer):
         if not user.is_active:
             raise serializers.ValidationError("The account is not activated.")
 
-        
         refresh = RefreshToken.for_user(user)
 
+        # افترضنا أن حقل role موجود ضمن user model
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
+            'role': user.role  # هون جبنا الدور من حساب المستخدم
         }
+

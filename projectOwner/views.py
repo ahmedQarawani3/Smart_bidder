@@ -3,12 +3,9 @@ from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 from django.shortcuts import get_object_or_404
 from .serializer import ProjectSerializer
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework import generics, permissions
-from .serializer import ProjectStatusSerializer
 from .serializer import ProjectOwnerUpdateSerializer
-from rest_framework import generics, filters
+from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import ProjectOwner, Project
 from .serializer import InvestmentOfferSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -16,26 +13,24 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from investor.models import InvestmentOffer
 from .serializer import OfferStatusUpdateSerializer
-#create project
+from .serializer import ProjectDetailsSerializer
+from rest_framework.generics import RetrieveUpdateAPIView
+from .serializer import FeasibilityStudySerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import generics, permissions
+from .models import Project,FeasibilityStudy,ProjectOwner
+from  investor.models import  InvestmentOffer
+
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-
     def perform_create(self, serializer):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         serializer.save(owner=owner)
 
-
-
-#عرض المشاريع الخاصه بي
-class MyProjectStatusView(generics.ListAPIView):
-    serializer_class = ProjectStatusSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        project_owner = ProjectOwner.objects.get(user=self.request.user)
-        return Project.objects.filter(owner=project_owner)
 
 #عرض العروض المقدمه لصاحب المشروع
 class MyProjectOffersView(generics.ListAPIView):
@@ -43,13 +38,10 @@ class MyProjectOffersView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # الحصول على صاحب المشروع المرتبط بالمستخدم الحالي
         project_owner = ProjectOwner.objects.get(user=self.request.user)
-        # الحصول على المشاريع التي يملكها
         owner_projects = Project.objects.filter(owner=project_owner)
-        # جلب كل العروض المرتبطة بهذه المشاريع
         return InvestmentOffer.objects.filter(project__in=owner_projects)
-#فلتره العروض 
+
 
 
 class FilteredOffersView(generics.ListAPIView):
@@ -108,17 +100,6 @@ class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user.project_owner_profile
 
-from rest_framework import generics, permissions
-from .models import Project
-from .serializer import ProjectDetailsSerializer
-
-from rest_framework import generics, permissions
-from .models import Project
-from .serializer import ProjectDetailsSerializer
-
-# عرض مشاريع المستخدم (مالك المشروع)
-from rest_framework import generics, permissions
-from .models import Project
 
 class MyProjectsListView(generics.ListAPIView):
     serializer_class = ProjectDetailsSerializer
@@ -128,20 +109,6 @@ class MyProjectsListView(generics.ListAPIView):
         return Project.objects.filter(owner__user=self.request.user)
 
 
-# تعديل مشروع معيّن (اختياري)
-# views.py
-# views.py
-from rest_framework import generics, permissions
-from .models import Project
-
-# views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .models import Project, FeasibilityStudy
-
-# views.py
 class MyProjectUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -161,13 +128,90 @@ class MyProjectUpdateView(APIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-from rest_framework.generics import RetrieveUpdateAPIView
-from .models import FeasibilityStudy
-from .serializer import FeasibilityStudySerializer
 
 class FeasibilityStudyUpdateAPIView(RetrieveUpdateAPIView):
     queryset = FeasibilityStudy.objects.all()
     serializer_class = FeasibilityStudySerializer
     permission_classes = [IsAuthenticated]
+
+
+
+from django.db.models import Sum
+from .serializer import ProjectOwnerDashboardSerializer
+
+class ProjectOwnerDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            project_owner = ProjectOwner.objects.get(user=request.user)
+        except ProjectOwner.DoesNotExist:
+            return Response({"detail": "Project owner not found."}, status=404)
+
+        # جميع المشاريع الخاصة بالمستخدم
+        projects = Project.objects.filter(owner=project_owner)
+
+        # عدد المشاريع النشطة فقط
+        active_projects = projects.filter(status='active')
+        active_projects_count = active_projects.count()
+
+        # مجموع التمويل المطلوب لجميع المشاريع النشطة
+        total_funding = FeasibilityStudy.objects.filter(project__in=active_projects)\
+            .aggregate(total=Sum('funding_required'))['total'] or 0
+
+        # عدد المستثمرين المختلفين المتواصلين (تفاوض أو شراء)
+        total_investors = InvestmentOffer.objects.filter(project__in=projects)\
+            .values('investor').distinct().count()
+
+        # عدد العروض المعلقة
+        pending_offers = InvestmentOffer.objects.filter(project__in=projects, status='pending').count()
+
+        # تحضير البيانات
+        data = {
+            "active_projects_count": active_projects_count,
+            "total_funding_required": total_funding,
+            "total_investors_connected": total_investors,
+            "pending_offers": pending_offers
+        }
+
+        serializer = ProjectOwnerDashboardSerializer(data)
+        return Response(serializer.data)
+# projects/views.py
+from rest_framework import generics, permissions
+from .models import Project
+from .serializer import ProjectListSerializer
+from django.db.models import Q
+
+from django.db.models.functions import Coalesce
+from django.db.models import Value
+
+class ProjectOwnerProjectsAPIView(generics.ListAPIView):
+    serializer_class = ProjectListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        search = self.request.query_params.get('search', '').strip().lower()
+        status_filter = self.request.query_params.get('status')
+
+        queryset = Project.objects.filter(owner__user=user)
+
+        if search:
+            queryset = queryset.annotate(
+                title_f=Coalesce('title', Value('')),
+                description_f=Coalesce('description', Value('')),
+                idea_summary_f=Coalesce('idea_summary', Value('')),
+                problem_solving_f=Coalesce('problem_solving', Value('')),
+            ).filter(
+                Q(title_f__icontains=search) |
+                Q(description_f__icontains=search) |
+                Q(idea_summary_f__icontains=search) |
+                Q(problem_solving_f__icontains=search)
+            )
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset.order_by('-created_at')
 
 
