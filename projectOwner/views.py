@@ -232,4 +232,7 @@ class FilteredOffersView(generics.ListAPIView):
     def get_queryset(self):
         project_owner = ProjectOwner.objects.get(user=self.request.user)
         owner_projects = Project.objects.filter(owner=project_owner)
-        return InvestmentOffer.objects.filter(project__in=owner_projects)
+        return InvestmentOffer.objects.filter(
+        project__in=owner_projects,
+        status__in=['pending', 'accepted']  # إظهار العروض غير المرفوضة فقط
+        )
