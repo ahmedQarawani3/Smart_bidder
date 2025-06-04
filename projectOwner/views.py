@@ -22,7 +22,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions
 from .models import Project,FeasibilityStudy,ProjectOwner
 from  investor.models import  InvestmentOffer
-
+#انشاء مشروع 
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -36,24 +36,6 @@ class CreateProjectView(generics.CreateAPIView):
 class MyProjectOffersView(generics.ListAPIView):
     serializer_class = InvestmentOfferSerializer
     permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        project_owner = ProjectOwner.objects.get(user=self.request.user)
-        owner_projects = Project.objects.filter(owner=project_owner)
-        return InvestmentOffer.objects.filter(project__in=owner_projects)
-
-
-
-class FilteredOffersView(generics.ListAPIView):
-    serializer_class = InvestmentOfferSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    
-    # يمكن فلترة حسب القيمة أو النسبة
-    filterset_fields = ['amount', 'equity_percentage', 'status']
-    
-    # يمكن الترتيب حسب الزمن أو القيمة
-    ordering_fields = ['amount', 'equity_percentage', 'created_at']
 
     def get_queryset(self):
         project_owner = ProjectOwner.objects.get(user=self.request.user)
@@ -148,25 +130,19 @@ class ProjectOwnerDashboardView(APIView):
         except ProjectOwner.DoesNotExist:
             return Response({"detail": "Project owner not found."}, status=404)
 
-        # جميع المشاريع الخاصة بالمستخدم
         projects = Project.objects.filter(owner=project_owner)
 
-        # عدد المشاريع النشطة فقط
         active_projects = projects.filter(status='active')
         active_projects_count = active_projects.count()
 
-        # مجموع التمويل المطلوب لجميع المشاريع النشطة
         total_funding = FeasibilityStudy.objects.filter(project__in=active_projects)\
             .aggregate(total=Sum('funding_required'))['total'] or 0
 
-        # عدد المستثمرين المختلفين المتواصلين (تفاوض أو شراء)
         total_investors = InvestmentOffer.objects.filter(project__in=projects)\
             .values('investor').distinct().count()
 
-        # عدد العروض المعلقة
         pending_offers = InvestmentOffer.objects.filter(project__in=projects, status='pending').count()
 
-        # تحضير البيانات
         data = {
             "active_projects_count": active_projects_count,
             "total_funding_required": total_funding,
@@ -215,3 +191,45 @@ class ProjectOwnerProjectsAPIView(generics.ListAPIView):
         return queryset.order_by('-created_at')
 
 
+from rest_framework import generics
+from .models import Project
+from .serializer import ProjectWithFeasibilitySerializer
+
+class ProjectWithFeasibilityPatchAPIView(generics.RetrieveUpdateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectWithFeasibilitySerializer
+    lookup_field = 'id'
+
+from rest_framework import generics, filters
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet, CharFilter, NumberFilter
+from .serializer import InvestmentOfferSerializer
+
+# فلتر مخصص حسب طلبك
+class InvestmentOfferFilter(FilterSet):
+    search = CharFilter(method='filter_search', label='Search offers')
+    amount = NumberFilter(field_name="amount")
+    equity_percentage = NumberFilter(field_name="equity_percentage")
+    status = CharFilter(field_name="status")
+
+    def filter_search(self, queryset, name, value):
+        return queryset.filter(
+            project__title__icontains=value
+        )
+
+    class Meta:
+        model = InvestmentOffer
+        fields = ['search', 'amount', 'equity_percentage', 'status']
+
+
+class FilteredOffersView(generics.ListAPIView):
+    serializer_class = InvestmentOfferSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = InvestmentOfferFilter
+    ordering_fields = ['created_at', 'amount']  
+
+    def get_queryset(self):
+        project_owner = ProjectOwner.objects.get(user=self.request.user)
+        owner_projects = Project.objects.filter(owner=project_owner)
+        return InvestmentOffer.objects.filter(project__in=owner_projects)

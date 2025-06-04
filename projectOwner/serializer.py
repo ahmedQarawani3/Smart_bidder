@@ -73,17 +73,24 @@ class ProjectSerializer(serializers.ModelSerializer):
         return project
 
 
-
-
-
-
-
+#هاد تمام عرض العروض المقدمه لصاحب المشروع مع فلاره
 class InvestmentOfferSerializer(serializers.ModelSerializer):
+    investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)  
+
     class Meta:
+
         model = InvestmentOffer
-        fields = ['id', 'amount', 'equity_percentage', 'additional_terms', 'status', 'created_at']
-
-
+        fields = [
+            'id',
+            'amount',
+            'equity_percentage',
+            'additional_terms',
+            'status',
+            'created_at',
+            'investor',         
+            'investor_name',   
+            'project'
+        ]
 
 class OfferStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -152,22 +159,7 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "feasibility_study",
         ]
 
-    def update(self, instance, validated_data):
-        feasibility_data = validated_data.pop('feasibility_study', None)
 
-        # تحديث بيانات المشروع
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        # تحديث بيانات دراسة الجدوى
-        if feasibility_data:
-            feasibility_instance = instance.feasibility_study
-            for attr, value in feasibility_data.items():
-                setattr(feasibility_instance, attr, value)
-            feasibility_instance.save()
-
-        return instance
 
 # serializers.py
 
@@ -206,4 +198,37 @@ class ProjectListSerializer(serializers.ModelSerializer):
     def get_investor_count(self, obj):
         return InvestmentOffer.objects.filter(project=obj, status='accepted') \
             .values('investor').distinct().count()
+
+from rest_framework import serializers
+from .models import Project, FeasibilityStudy
+
+class FeasibilityStudySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeasibilityStudy
+        exclude = ['project', 'created_at']
+
+class ProjectWithFeasibilitySerializer(serializers.ModelSerializer):
+    feasibility_study = FeasibilityStudySerializer(required=False)
+
+    class Meta:
+        model = Project
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+    def update(self, instance, validated_data):
+        feasibility_data = validated_data.pop('feasibility_study', None)
+
+        # تحديث بيانات المشروع
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # تحديث جزئي لبيانات دراسة الجدوى
+        if feasibility_data:
+            feasibility_instance = instance.feasibility_study
+            for attr, value in feasibility_data.items():
+                setattr(feasibility_instance, attr, value)
+            feasibility_instance.save()
+
+        return instance
 
