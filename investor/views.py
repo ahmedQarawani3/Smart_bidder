@@ -48,6 +48,9 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
         offer = self.get_offer()
         user = self.request.user
 
+        if offer.status == 'rejected':
+            raise PermissionDenied("لا يمكن عرض المحادثة لعرض تم رفضه.")
+
         if user != offer.project.owner.user and user != offer.investor.user:
             raise PermissionDenied("غير مصرح لك بعرض هذه المحادثة.")
 
@@ -57,10 +60,14 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
         offer = self.get_offer()
         user = self.request.user
 
+        if offer.status == 'rejected':
+            raise PermissionDenied("لا يمكن إرسال رسائل لعرض تم رفضه.")
+
         if user != offer.project.owner.user and user != offer.investor.user:
             raise PermissionDenied("غير مصرح لك بإرسال رسالة.")
 
         serializer.save(sender=user, offer=offer)
+
 
 
 # تعليم الرسائل كمقروءة عند فتح المحادثة
@@ -97,6 +104,7 @@ class RejectOfferView(APIView):
         offer.save()
 
         return Response({"detail": "تم رفض العرض بنجاح."}, status=status.HTTP_200_OK)
+
 
 
 

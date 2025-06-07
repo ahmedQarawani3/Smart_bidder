@@ -1,10 +1,7 @@
-from .models import Project, ProjectFile,FeasibilityStudy
+from .models import Project, ProjectFile,FeasibilityStudy,ProjectOwner
+from investor.models import Investor,InvestmentOffer
 from rest_framework import serializers
-from investor.models import InvestmentOffer
-from rest_framework import serializers
-from .models import ProjectOwner
-from rest_framework import serializers
-from .models import ProjectOwner
+
 class ProjectFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectFile
@@ -98,8 +95,7 @@ class OfferStatusUpdateSerializer(serializers.ModelSerializer):
         fields = ['id', 'status']
 
 
-from rest_framework import serializers
-from .models import ProjectOwner, Project, FeasibilityStudy
+
 
 class ProjectOwnerUpdateSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.full_name', required=False)
@@ -159,22 +155,35 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "feasibility_study",
         ]
 
+    def update(self, instance, validated_data):
+        feasibility_data = validated_data.pop('feasibility_study', None)
+
+        # تحديث بيانات المشروع العادية
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # تحديث بيانات الجدوى الاقتصادية إن وجدت
+        if feasibility_data:
+            feasibility_instance = instance.feasibility_study
+            for attr, value in feasibility_data.items():
+                setattr(feasibility_instance, attr, value)
+            feasibility_instance.save()
+
+        return instance
 
 
-# serializers.py
 
-from rest_framework import serializers
+
+
+
 
 class ProjectOwnerDashboardSerializer(serializers.Serializer):
     active_projects_count = serializers.IntegerField()
     total_funding_required = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_investors_connected = serializers.IntegerField()
     pending_offers = serializers.IntegerField()
-# projects/serializers.py
-from rest_framework import serializers
-from .models import Project, FeasibilityStudy
-from investor.models import Investor
-from investor.models import InvestmentOffer
+
 
 class ProjectListSerializer(serializers.ModelSerializer):
     funding_required = serializers.SerializerMethodField()
@@ -199,8 +208,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
         return InvestmentOffer.objects.filter(project=obj, status='accepted') \
             .values('investor').distinct().count()
 
-from rest_framework import serializers
-from .models import Project, FeasibilityStudy
+
 
 class FeasibilityStudySerializer(serializers.ModelSerializer):
     class Meta:

@@ -22,6 +22,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, permissions
 from .models import Project,FeasibilityStudy,ProjectOwner
 from  investor.models import  InvestmentOffer
+# projects/views.py
+from rest_framework import generics, permissions
+from .models import Project
+from .serializer import ProjectListSerializer
+from django.db.models import Q
+
+from django.db.models.functions import Coalesce
+from django.db.models import Value
+from django.db.models import Sum
+from .serializer import ProjectOwnerDashboardSerializer
 #انشاء مشروع 
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
@@ -30,7 +40,6 @@ class CreateProjectView(generics.CreateAPIView):
     def perform_create(self, serializer):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         serializer.save(owner=owner)
-
 
 #عرض العروض المقدمه لصاحب المشروع
 class MyProjectOffersView(generics.ListAPIView):
@@ -43,37 +52,41 @@ class MyProjectOffersView(generics.ListAPIView):
         return InvestmentOffer.objects.filter(project__in=owner_projects)
 
 
-#قبول ورفض عرض استثماري
+# قبول عرض استثماري فقط (رفض العروض الأخرى تلقائيًا)
 class UpdateOfferStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, offer_id):
         try:
-            offer = InvestmentOffer.objects.get(id=offer_id)
+            offer = InvestmentOffer.objects.select_related('project__owner__user').get(id=offer_id)
         except InvestmentOffer.DoesNotExist:
-            return Response({'error': 'Offer not found'}, status=404)
+            return Response({'error': 'العرض غير موجود.'}, status=404)
 
-        # تحقق من أن المستخدم هو صاحب المشروع
         if request.user != offer.project.owner.user:
-            return Response({'error': 'Unauthorized'}, status=403)
+            return Response({'error': 'غير مصرح لك بقبول هذا العرض.'}, status=403)
 
         new_status = request.data.get('status')
-        if new_status not in ['Accepted', 'Rejected']:
-            return Response({'error': 'Invalid status'}, status=400)
+        if new_status != 'Accepted':
+            return Response({'error': 'هذا المسار مخصص لقبول العروض فقط.'}, status=400)
 
-        if new_status == 'Accepted':
-            # غلق المشروع
-            project = offer.project
-            project.status = 'Closed'
-            project.save()
+        project = offer.project
 
-            # رفض باقي العروض
-            InvestmentOffer.objects.filter(project=project).exclude(id=offer.id).update(status='Rejected')
+        if project.status.lower() == 'closed':
+            return Response({'error': 'المشروع مغلق ولا يمكن قبول عروض جديدة.'}, status=400)
 
-        offer.status = new_status
+        if offer.status == 'accepted':
+            return Response({'error': 'تم قبول هذا العرض مسبقًا.'}, status=400)
+
+        project.status = 'Closed'
+        project.save()
+
+        InvestmentOffer.objects.filter(project=project).exclude(id=offer.id).update(status='rejected')
+
+        offer.status = 'accepted'
         offer.save()
 
-        return Response({'message': f'Offer has been {new_status.lower()}'}, status=200)
+        return Response({'message': 'تم قبول العرض بنجاح.'}, status=200)
+
 #update and get profile
 class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ProjectOwnerUpdateSerializer
@@ -82,7 +95,7 @@ class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user.project_owner_profile
 
-
+#عرض المشاريع الخاصه بي
 class MyProjectsListView(generics.ListAPIView):
     serializer_class = ProjectDetailsSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -90,7 +103,7 @@ class MyProjectsListView(generics.ListAPIView):
     def get_queryset(self):
         return Project.objects.filter(owner__user=self.request.user)
 
-
+#تعديل مشروع خاص بي 
 class MyProjectUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -111,16 +124,7 @@ class MyProjectUpdateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class FeasibilityStudyUpdateAPIView(RetrieveUpdateAPIView):
-    queryset = FeasibilityStudy.objects.all()
-    serializer_class = FeasibilityStudySerializer
-    permission_classes = [IsAuthenticated]
-
-
-
-from django.db.models import Sum
-from .serializer import ProjectOwnerDashboardSerializer
-
+#عرض active_projects_count وtotal_funding_required وtotal_investors_connected وpending_offers
 class ProjectOwnerDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -152,14 +156,7 @@ class ProjectOwnerDashboardView(APIView):
 
         serializer = ProjectOwnerDashboardSerializer(data)
         return Response(serializer.data)
-# projects/views.py
-from rest_framework import generics, permissions
-from .models import Project
-from .serializer import ProjectListSerializer
-from django.db.models import Q
 
-from django.db.models.functions import Coalesce
-from django.db.models import Value
 
 class ProjectOwnerProjectsAPIView(generics.ListAPIView):
     serializer_class = ProjectListSerializer
@@ -191,14 +188,7 @@ class ProjectOwnerProjectsAPIView(generics.ListAPIView):
         return queryset.order_by('-created_at')
 
 
-from rest_framework import generics
-from .models import Project
-from .serializer import ProjectWithFeasibilitySerializer
 
-class ProjectWithFeasibilityPatchAPIView(generics.RetrieveUpdateAPIView):
-    queryset = Project.objects.all()
-    serializer_class = ProjectWithFeasibilitySerializer
-    lookup_field = 'id'
 
 from rest_framework import generics, filters
 from rest_framework.permissions import IsAuthenticated
@@ -233,6 +223,7 @@ class FilteredOffersView(generics.ListAPIView):
         project_owner = ProjectOwner.objects.get(user=self.request.user)
         owner_projects = Project.objects.filter(owner=project_owner)
         return InvestmentOffer.objects.filter(
-        project__in=owner_projects,
-        status__in=['pending', 'accepted']  # إظهار العروض غير المرفوضة فقط
+            project__in=owner_projects,
+            status='pending'
         )
+
