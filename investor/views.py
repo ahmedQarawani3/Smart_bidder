@@ -106,5 +106,18 @@ class RejectOfferView(APIView):
         return Response({"detail": "تم رفض العرض بنجاح."}, status=status.HTTP_200_OK)
 
 
+from rest_framework import generics, permissions
+from projectOwner.models import Project
+from projectOwner.serializer import ProjectDetailsSerializer
+from django.db.models import Q
+
+class AllProjectsListView(generics.ListAPIView):
+    serializer_class = ProjectDetailsSerializer
+    permission_classes = [permissions.IsAuthenticated]  
+
+    def get_queryset(self):
+        return Project.objects.filter(
+            Q(status='active') | Q(status='under_negotiation')
+        )
 
 

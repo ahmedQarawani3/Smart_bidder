@@ -55,8 +55,8 @@ class InvestorRegisterSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(max_length=20)
     company_name = serializers.CharField(allow_blank=True, required=False)
     commercial_register = serializers.CharField(allow_blank=True, required=False)
-    profile_picture = serializers.ImageField(required=False)
-    id_card_picture = serializers.ImageField(required=False)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
+    id_card_picture = serializers.ImageField(required=False, allow_null=True)
     terms_agreed = serializers.CharField(required=True)
     full_name = serializers.CharField(required=True)
 
@@ -93,6 +93,7 @@ class InvestorRegisterSerializer(serializers.ModelSerializer):
                 return investor
         except Exception as e:
             raise serializers.ValidationError({"error": str(e)})
+
 
 
 from rest_framework import serializers
