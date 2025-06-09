@@ -16,7 +16,15 @@ class ProjectOwnerRegisterView(APIView):
             return Response({'message': 'Project owner registered successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class InvestorRegisterView(APIView):
+    def post(self, request):
+        serializer = InvestorRegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'investor registered successfully'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        
 class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
