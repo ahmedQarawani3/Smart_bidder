@@ -53,6 +53,7 @@ class MyProjectOffersView(generics.ListAPIView):
 
 
 # قبول عرض استثماري فقط (رفض العروض الأخرى تلقائيًا)
+
 class UpdateOfferStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -60,22 +61,22 @@ class UpdateOfferStatusView(APIView):
         try:
             offer = InvestmentOffer.objects.select_related('project__owner__user').get(id=offer_id)
         except InvestmentOffer.DoesNotExist:
-            return Response({'error': 'العرض غير موجود.'}, status=404)
+            return Response({'error': 'Offer not found.'}, status=404)
 
         if request.user != offer.project.owner.user:
-            return Response({'error': 'غير مصرح لك بقبول هذا العرض.'}, status=403)
+            return Response({'error': 'You are not authorized to accept this offer.'}, status=403)
 
         new_status = request.data.get('status')
         if new_status != 'Accepted':
-            return Response({'error': 'هذا المسار مخصص لقبول العروض فقط.'}, status=400)
+            return Response({'error': 'This endpoint is only for accepting offers.'}, status=400)
 
         project = offer.project
 
         if project.status.lower() == 'closed':
-            return Response({'error': 'المشروع مغلق ولا يمكن قبول عروض جديدة.'}, status=400)
+            return Response({'error': 'The project is closed and cannot accept new offers.'}, status=400)
 
         if offer.status == 'accepted':
-            return Response({'error': 'تم قبول هذا العرض مسبقًا.'}, status=400)
+            return Response({'error': 'This offer has already been accepted.'}, status=400)
 
         project.status = 'Closed'
         project.save()
@@ -85,7 +86,8 @@ class UpdateOfferStatusView(APIView):
         offer.status = 'accepted'
         offer.save()
 
-        return Response({'message': 'تم قبول العرض بنجاح.'}, status=200)
+        return Response({'message': 'Offer accepted successfully.'}, status=200)
+
 
 #update and get profile
 class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
@@ -217,13 +219,28 @@ class FilteredOffersView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = InvestmentOfferFilter
-    ordering_fields = ['created_at', 'amount']  
+    ordering_fields = ['created_at', 'amount']
 
     def get_queryset(self):
         project_owner = ProjectOwner.objects.get(user=self.request.user)
         owner_projects = Project.objects.filter(owner=project_owner)
-        return InvestmentOffer.objects.filter(
-            project__in=owner_projects,
-            status='pending'
-        )
+        return InvestmentOffer.objects.filter(project__in=owner_projects)
 
+
+
+from .serializer import ProjectDetailsSerializer
+
+class MyProjectDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        try:
+            project_owner = ProjectOwner.objects.get(user=request.user)
+            project = Project.objects.get(id=project_id, owner=project_owner)
+        except ProjectOwner.DoesNotExist:
+            return Response({"detail": "You are not registered as a project owner."}, status=status.HTTP_403_FORBIDDEN)
+        except Project.DoesNotExist:
+            return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProjectDetailsSerializer(project)
+        return Response(serializer.data, status=status.HTTP_200_OK)

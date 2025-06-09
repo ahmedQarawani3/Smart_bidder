@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import UpdateProjectOwnerProfileView
 from .views import ProjectOwnerDashboardView
 from .views import ProjectOwnerProjectsAPIView
-from .views import FilteredOffersView
+from .views import FilteredOffersView, MyProjectDetailView
 
 from .views import MyProjectsListView, MyProjectUpdateView
 urlpatterns = [
@@ -18,7 +18,8 @@ urlpatterns = [
     path("my-projects/<int:project_id>/", MyProjectUpdateView.as_view(), name="my-project-update"),#11
     path('dashboard/', ProjectOwnerDashboardView.as_view(), name='projectowner-dashboard'),#11
     path('my-projects/', ProjectOwnerProjectsAPIView.as_view(), name='my-projects'),
-    path('project-owner/offers/', FilteredOffersView.as_view(), name='filtered-investment-offers')#11
+    path('project-owner/offers/', FilteredOffersView.as_view(), name='filtered-investment-offers'),#11
+    path('my-projectss/<int:project_id>/', MyProjectDetailView.as_view(), name='my-project-detail')
 
 
 

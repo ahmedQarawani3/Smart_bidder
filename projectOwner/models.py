@@ -75,9 +75,6 @@ class FeasibilityStudy(models.Model):
     def __str__(self):
         return f"Feasibility for Project {self.project.title}"
 
-
-
-
 class ProjectFile(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     file = models.FileField(upload_to='project_files/')
