@@ -147,7 +147,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,  # عدد النتائج لكل صفحة
+    'PAGE_SIZE': 80,  # عدد النتائج لكل صفحة
 }
 
 
