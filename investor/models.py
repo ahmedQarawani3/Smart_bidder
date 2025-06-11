@@ -5,7 +5,7 @@ from django.db import models
 from accounts.models import User
 from projectOwner.models import Project
 
-class Investor(models.Model):
+class (models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     company_name = models.CharField(max_length=255, blank=True, null=True)
     commercial_register = models.CharField(max_length=100, blank=True, null=True)
