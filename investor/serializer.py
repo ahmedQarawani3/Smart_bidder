@@ -29,6 +29,7 @@ class NegotiationSerializer(serializers.ModelSerializer):
     def get_is_sent_by_user(self, obj):
         request_user = self.context['request'].user
         return obj.sender == request_user
+from django.db.models import Q
 
   
 
@@ -38,6 +39,7 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     last_message_time = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    messages = serializers.SerializerMethodField()
 
     class Meta:
         model = InvestmentOffer
@@ -48,6 +50,7 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
             'last_message',
             'last_message_time',
             'unread_count',
+            'messages',
         ]
 
     def get_project_title(self, obj):
@@ -59,17 +62,48 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
             return obj.investor.user.get_full_name()
         elif user == obj.investor.user:
             return obj.project.owner.user.get_full_name()
-        return None  # المستخدم مش طرف في العرض (احتياطي أمان)
-
+        return None
 
     def get_last_message(self, obj):
-        last = obj.negotiations.order_by('-timestamp').first()
+        user = self.context['request'].user
+        last = obj.negotiations.filter(
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
+        ).order_by('-timestamp').first()
         return last.message if last else ""
 
     def get_last_message_time(self, obj):
-        last = obj.negotiations.order_by('-timestamp').first()
+        user = self.context['request'].user
+        last = obj.negotiations.filter(
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
+        ).order_by('-timestamp').first()
         return last.timestamp.strftime('%m/%d/%Y') if last else None
 
     def get_unread_count(self, obj):
         user = self.context['request'].user
-        return obj.negotiations.filter(is_read=False).exclude(sender=user).count()
+        return obj.negotiations.filter(
+            is_read=False
+        ).exclude(sender=user).filter(
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
+        ).count()
+
+    def get_messages(self, obj):
+        user = self.context['request'].user
+        messages_qs = obj.negotiations.filter(
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
+        ).order_by('timestamp')
+        return NegotiationMessageSerializer(messages_qs, many=True).data
+
+
+
+
+class NegotiationMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source='sender.get_full_name')
+    is_owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Negotiation
+        fields = ['id', 'message', 'timestamp', 'is_read', 'sender_name', 'is_owner']
+
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        return request and obj.sender == request.user
