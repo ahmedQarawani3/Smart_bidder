@@ -53,11 +53,13 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
     def get_project_title(self, obj):
         return obj.project.title
 
-def get_other_user_name(self, obj):
-    user = self.context['request'].user
-    if user == obj.project.owner.user:
-        return obj.investor.user.get_full_name() or obj.investor.user.username
-    return obj.project.owner.user.get_full_name() or obj.project.owner.user.username
+    def get_other_user_name(self, obj):
+        user = self.context['request'].user
+        if user == obj.project.owner.user:
+            return obj.investor.user.get_full_name()
+        elif user == obj.investor.user:
+            return obj.project.owner.user.get_full_name()
+        return None  # المستخدم مش طرف في العرض (احتياطي أمان)
 
 
     def get_last_message(self, obj):
