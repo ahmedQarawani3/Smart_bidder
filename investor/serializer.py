@@ -2,28 +2,24 @@
 from rest_framework import serializers
 from .models import Negotiation,InvestmentOffer
 
+from rest_framework import serializers
+from .models import Negotiation
+
 class NegotiationSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
-    receiver_name = serializers.SerializerMethodField()
-    is_sent_by_user = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Negotiation
-        fields = '__all__'
+        fields = ['id', 'message', 'timestamp', 'is_read', 'sender_name', 'is_owner']
         read_only_fields = ['sender', 'offer', 'timestamp', 'is_read']
 
     def get_sender_name(self, obj):
         return obj.sender.get_full_name() or obj.sender.username
 
-    def get_receiver_name(self, obj):
-        request_user = self.context['request'].user
-        if obj.offer.investor.user == request_user:
-            return obj.offer.project.owner.user.get_full_name()
-        return obj.offer.investor.user.get_full_name()
-
-    def get_is_sent_by_user(self, obj):
-        request_user = self.context['request'].user
-        return obj.sender == request_user
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        return request and obj.sender == request.user
   
 
 class NegotiationConversationSerializer(serializers.ModelSerializer):

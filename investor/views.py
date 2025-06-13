@@ -39,7 +39,7 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
     def get_offer(self):
         offer_id = self.kwargs['offer_id']
         try:
-            offer = InvestmentOffer.objects.select_related('project__owner__user', 'investor__user').get(id=offer_id)
+            offer = InvestmentOffer.objects.select_related('project_owneruser', 'investor_user').get(id=offer_id)
         except InvestmentOffer.DoesNotExist:
             raise PermissionDenied("العرض غير موجود.")
         return offer
@@ -67,6 +67,9 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied("غير مصرح لك بإرسال رسالة.")
 
         serializer.save(sender=user, offer=offer)
+
+    def get_serializer_context(self):
+        return {'request': self.request}
 
 
 
