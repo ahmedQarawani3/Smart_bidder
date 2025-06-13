@@ -13,7 +13,12 @@ class NegotiationSerializer(serializers.ModelSerializer):
         read_only_fields = ['sender', 'offer', 'timestamp', 'is_read']
 
     def get_sender_name(self, obj):
+        request_user = self.context['request'].user
+        if obj.sender == request_user:
+            # لا ترجع اسم المستخدم الحالي
+            return None
         return obj.sender.get_full_name() or obj.sender.username
+
 
     def get_receiver_name(self, obj):
         request_user = self.context['request'].user
