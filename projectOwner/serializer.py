@@ -75,7 +75,6 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
     investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)  
 
     class Meta:
-
         model = InvestmentOffer
         fields = [
             'id',
@@ -84,10 +83,10 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
             'additional_terms',
             'status',
             'created_at',
-            'investor',         
-            'investor_name',   
-            'project'
+            'investor_name',
+            'project',
         ]
+
 
 class OfferStatusUpdateSerializer(serializers.ModelSerializer):
     class Meta:

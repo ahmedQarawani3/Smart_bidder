@@ -20,15 +20,37 @@ from .serializer import (
 )
 
 # عرض جميع المحادثات التي شارك فيها المستخدم
+from django.db.models import Q, Exists, OuterRef
+
+from django.db.models import Q, Exists, OuterRef
+from .models import InvestmentOffer, Negotiation  # تأكد من استيراد الموديلات
+
 class UserNegotiationConversationsView(generics.ListAPIView):
     serializer_class = NegotiationConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+
+        # التحقق من وجود مفاوضات تخص هذا المستخدم فقط
+        negotiations_subquery = Negotiation.objects.filter(
+            offer=OuterRef('pk')
+        ).filter(
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
+
+        )
+
+        # عرض فقط العروض التي للمستخدم دور فيها + تحتوي على مفاوضات تخصه هو فقط
         return InvestmentOffer.objects.filter(
             Q(investor__user=user) | Q(project__owner__user=user)
-        ).distinct()
+        ).annotate(
+            has_user_negotiations=Exists(negotiations_subquery)
+        ).filter(
+            has_user_negotiations=True
+        )
+
+
+
 
 
 # عرض وإنشاء رسائل لمحادثة معينة

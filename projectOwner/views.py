@@ -47,9 +47,13 @@ class MyProjectOffersView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        project_owner = ProjectOwner.objects.get(user=self.request.user)
-        owner_projects = Project.objects.filter(owner=project_owner)
-        return InvestmentOffer.objects.filter(project__in=owner_projects)
+        try:
+            project_owner = ProjectOwner.objects.get(user=self.request.user)
+        except ProjectOwner.DoesNotExist:
+            return InvestmentOffer.objects.none()  # لا يوجد عروض إذا المستخدم ليس صاحب مشروع
+
+        return InvestmentOffer.objects.filter(project__owner=project_owner)
+
 
 
 # قبول عرض استثماري فقط (رفض العروض الأخرى تلقائيًا)
