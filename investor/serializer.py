@@ -22,9 +22,12 @@ class NegotiationLastMessageSerializer(serializers.ModelSerializer):
 from rest_framework import serializers
 from .models import Negotiation
 
+
+
 class NegotiationSerializer(serializers.ModelSerializer):
     sender_full_name = serializers.CharField(source='sender.full_name', read_only=True)
 
     class Meta:
         model = Negotiation
-        fields = ['id', 'offer', 'sender', 'sender_full_name', 'message', 'timestamp', 'is_read']
+        fields = ['id', 'offer', 'sender', 'sender_full_name', 'investor', 'message', 'timestamp', 'is_read']
+
