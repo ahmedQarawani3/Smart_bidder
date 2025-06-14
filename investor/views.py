@@ -8,6 +8,12 @@ from projectOwner.models import Project
 User = get_user_model()
 
 from django.db.models import Q, Max, Count, Case, When, BooleanField
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Max
+from .models import Negotiation, Project  # تأكد من استيراد النماذج الضرورية
+
 class ConversationsListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -31,11 +37,12 @@ class ConversationsListAPIView(APIView):
 
             last_msg = Negotiation.objects.filter(offer_id=offer_id, timestamp=last_time).first()
             offer = last_msg.offer
+            project = offer.project  # ← هنا أخذنا المشروع
 
             if user.role == 'investor':
                 other_user = offer.project.owner.user
             else:
-                other_user = offer.investor.user  # ✅ هنا التعديل المهم
+                other_user = offer.investor.user
 
             unread_exists = Negotiation.objects.filter(
                 offer_id=offer_id,
@@ -49,10 +56,12 @@ class ConversationsListAPIView(APIView):
                 'last_message': last_msg.message,
                 'last_message_time': last_msg.timestamp,
                 'is_read': not unread_exists,
+                'project_title': project.title  # ← هنا أضفنا اسم المشروع
             })
 
         conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
         return Response(conversations)
+
 
 
 # views.py
