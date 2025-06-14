@@ -25,16 +25,12 @@ from .serializer import NegotiationSerializer, NegotiationConversationSerializer
 
 from rest_framework.pagination import PageNumberPagination
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+
 
 
 class UserNegotiationConversationsView(generics.ListAPIView):
     serializer_class = NegotiationConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -85,6 +81,12 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
 
         return Negotiation.objects.filter(offer=offer).order_by('timestamp')
 
+    def get_serializer_context(self):
+        # هادي الطريقة الصحيحة لتمرير ال context عشان serializer يستخدم request
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
     def perform_create(self, serializer):
         offer = self.get_offer()
         user = self.request.user
@@ -96,6 +98,7 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied("غير مصرح لك بإرسال رسالة.")
 
         serializer.save(sender=user, offer=offer)
+
 
 
 @api_view(['POST'])
@@ -134,12 +137,18 @@ class RejectOfferView(APIView):
 
 class AllProjectsListView(generics.ListAPIView):
     """
-    عرض جميع المشاريع النشطة أو التي هي تحت التفاوض
+    عرض جميع المشاريع النشطة أو التي هي تحت التفاوض، للمستثمرين فقط
     """
     serializer_class = ProjectDetailsSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
+
+        # التحقق من أن المستخدم مستثمر فقط
+        if not hasattr(user, 'role') or user.role != 'investor':
+            raise PermissionDenied("فقط المستثمر يمكنه رؤية هذه المشاريع.")
+
         return Project.objects.filter(
             Q(status='active') | Q(status='under_negotiation')
         )
