@@ -11,10 +11,18 @@ class UserSimpleSerializer(serializers.ModelSerializer):
 
 class NegotiationLastMessageSerializer(serializers.ModelSerializer):
     sender = UserSimpleSerializer(read_only=True)
+    from_me = serializers.SerializerMethodField()
 
     class Meta:
         model = Negotiation
-        fields = ['id', 'message', 'timestamp', 'is_read', 'sender']
+        fields = ['id', 'message', 'timestamp', 'is_read', 'sender', 'from_me']
+
+    def get_from_me(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            return obj.sender == request.user
+        return False
+
 
 
 

@@ -75,6 +75,13 @@ class MarkMessagesReadAPIView(APIView):
 
 from .models import InvestmentOffer
 from .serializer import NegotiationSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import InvestmentOffer, Negotiation
+from .serializer import NegotiationSerializer
+
 class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -85,14 +92,13 @@ class SendMessageAPIView(APIView):
         if not message:
             return Response({'detail': 'Message content is required.'}, status=400)
 
-        offer = InvestmentOffer.objects.filter(id=offer_id).first()
-        if not offer:
-            return Response({'detail': 'Offer not found.'}, status=404)
+        offer = get_object_or_404(InvestmentOffer, id=offer_id)
 
+        # تحقق من الصلاحية حسب الدور
         if user.role == 'owner' and offer.project.owner.user != user:
             return Response({'detail': 'Unauthorized'}, status=403)
 
-        if user.role == 'investor' and offer.investor != user:
+        if user.role == 'investor' and offer.investor.user != user:
             return Response({'detail': 'Unauthorized'}, status=403)
 
         negotiation = Negotiation.objects.create(
@@ -102,8 +108,10 @@ class SendMessageAPIView(APIView):
             is_read=False
         )
 
-        serializer = NegotiationSerializer(negotiation)
-        return Response(serializer.data)
+        serializer = NegotiationSerializer(negotiation, context={'request': request})
+        return Response(serializer.data, status=201)
+
+
 
 from django.db.models import Q
 
