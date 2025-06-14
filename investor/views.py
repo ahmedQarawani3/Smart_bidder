@@ -8,7 +8,6 @@ from projectOwner.models import Project
 User = get_user_model()
 
 from django.db.models import Q, Max, Count, Case, When, BooleanField
-
 class ConversationsListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -23,7 +22,6 @@ class ConversationsListAPIView(APIView):
         else:
             return Response({'detail': 'Unauthorized'}, status=403)
 
-        # استخراج آخر رسالة في كل محادثة بين (عرض - مستثمر)
         last_msgs = negotiations.values('offer_id').annotate(last_timestamp=Max('timestamp'))
 
         conversations = []
@@ -37,7 +35,7 @@ class ConversationsListAPIView(APIView):
             if user.role == 'investor':
                 other_user = offer.project.owner.user
             else:
-                other_user = offer.investor
+                other_user = offer.investor.user  # ✅ هنا التعديل المهم
 
             unread_exists = Negotiation.objects.filter(
                 offer_id=offer_id,
@@ -55,6 +53,7 @@ class ConversationsListAPIView(APIView):
 
         conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
         return Response(conversations)
+
 
 
 
