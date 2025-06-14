@@ -3,33 +3,30 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
-
-from .models import Negotiation
-from .serializer import NegotiationSerializer
-from .models import InvestmentOffer
-
-from rest_framework import generics, permissions
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from django.db.models import Q
+from rest_framework.pagination import PageNumberPagination
+
+from django.db.models import Q, Exists, OuterRef
 
 from .models import InvestmentOffer, Negotiation
-from .serializer import (
-    NegotiationSerializer,
-    NegotiationConversationSerializer
-)
+from .serializer import NegotiationSerializer, NegotiationConversationSerializer
 
-# عرض جميع المحادثات التي شارك فيها المستخدم
-from django.db.models import Q, Exists, OuterRef
+from projectOwner.models import Project
+from projectOwner.serializer import ProjectDetailsSerializer
 
+from rest_framework import generics, permissions, status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Q, Exists, OuterRef
-from .models import InvestmentOffer, Negotiation  # تأكد من استيراد الموديلات
+from .models import InvestmentOffer, Negotiation
+from .serializer import NegotiationSerializer, NegotiationConversationSerializer
 
 from rest_framework.pagination import PageNumberPagination
 
-
 class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10 # عدد العناصر في كل صفحة
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
 
@@ -42,12 +39,11 @@ class UserNegotiationConversationsView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
 
+        # نجيب العروض التي للمستخدم كمستثمر أو كصاحب مشروع
         negotiations_subquery = Negotiation.objects.filter(
             offer=OuterRef('pk')
         ).filter(
-            Q(sender=user) |
-            Q(offer__investor__user=user) |
-            Q(offer__project__owner__user=user)
+            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
         )
 
         queryset = InvestmentOffer.objects.filter(
@@ -60,17 +56,11 @@ class UserNegotiationConversationsView(generics.ListAPIView):
             'investor__user', 'project__owner__user'
         ).prefetch_related(
             'negotiations'
-        ).order_by('-id')  # ← الترتيب هنا لحل المشكلة
+        ).order_by('-id')
 
         return queryset
 
 
-
-
-
-
-
-# عرض وإنشاء رسائل لمحادثة معينة
 class NegotiationListCreateView(generics.ListCreateAPIView):
     serializer_class = NegotiationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -108,8 +98,6 @@ class NegotiationListCreateView(generics.ListCreateAPIView):
         serializer.save(sender=user, offer=offer)
 
 
-
-# تعليم الرسائل كمقروءة عند فتح المحادثة
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def mark_negotiation_messages_as_read(request, offer_id):
@@ -124,7 +112,6 @@ def mark_negotiation_messages_as_read(request, offer_id):
 
     Negotiation.objects.filter(offer=offer, is_read=False).exclude(sender=user).update(is_read=True)
     return Response({'status': 'تم تعليم الرسائل كمقروءة'})
-
 
 
 class RejectOfferView(APIView):
@@ -145,18 +132,14 @@ class RejectOfferView(APIView):
         return Response({"detail": "تم رفض العرض بنجاح."}, status=status.HTTP_200_OK)
 
 
-from rest_framework import generics, permissions
-from projectOwner.models import Project
-from projectOwner.serializer import ProjectDetailsSerializer
-from django.db.models import Q
-
 class AllProjectsListView(generics.ListAPIView):
+    """
+    عرض جميع المشاريع النشطة أو التي هي تحت التفاوض
+    """
     serializer_class = ProjectDetailsSerializer
-    permission_classes = [permissions.IsAuthenticated]  
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return Project.objects.filter(
             Q(status='active') | Q(status='under_negotiation')
         )
-
-
