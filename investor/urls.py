@@ -18,7 +18,7 @@ urlpatterns = [
     #path('offers/<int:offer_id>/reject/', RejectOfferView.as_view(), name='reject-offer'),
     #path('projects/all/', AllProjectsListView.as_view(), name='all-projects'),
     path('conversations/', ConversationsListAPIView.as_view(), name='conversations-list'),
-    path('conversations/<int:offer_id>/<int:investor_id>/', ConversationDetailAPIView.as_view(), name='conversation-detail'),
+    path('conversations/<int:offer_id>/', ConversationDetailAPIView.as_view(), name='conversation-detail'),
     path('conversations/<int:offer_id>/<int:investor_id>/send/', SendMessageAPIView.as_view(), name='send-message'),
 
     path('messages/<int:offer_id>/mark-read/', MarkMessagesReadAPIView.as_view(), name='mark-messages-read'),

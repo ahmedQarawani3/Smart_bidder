@@ -55,13 +55,6 @@ class ConversationsListAPIView(APIView):
         return Response(conversations)
 
 
-
-
-
-
-
-
-
 # views.py
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -112,6 +105,8 @@ class SendMessageAPIView(APIView):
         serializer = NegotiationSerializer(negotiation)
         return Response(serializer.data)
 
+from django.db.models import Q
+
 
 
 class ConversationDetailAPIView(APIView):
@@ -123,17 +118,21 @@ class ConversationDetailAPIView(APIView):
 
         if not offer:
             return Response({'detail': 'Offer not found'}, status=404)
-
         if not (
             (user.role == 'owner' and offer.project.owner.user == user) or
-            (user.role == 'investor' and offer.investor == user)
+            (user.role == 'investor' and offer.investor.user == user)
         ):
             return Response({'detail': 'Unauthorized access'}, status=403)
-
-        negotiations = Negotiation.objects.filter(offer=offer).order_by('timestamp')
-
+        other_user = offer.project.owner.user if user.role == 'investor' else offer.investor.user
+        negotiations = Negotiation.objects.filter(
+            offer=offer
+        ).filter(
+            Q(sender=user) | Q(sender=other_user)
+        ).order_by('timestamp')
         unread_messages = negotiations.filter(is_read=False).exclude(sender=user)
         unread_messages.update(is_read=True)
 
-        serializer = NegotiationSerializer(negotiations, many=True)
+        serializer = NegotiationSerializer(negotiations, many=True, context={'request': request})
         return Response(serializer.data)
+
+
