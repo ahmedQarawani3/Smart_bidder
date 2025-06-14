@@ -42,16 +42,20 @@ class CreateProjectView(generics.CreateAPIView):
         serializer.save(owner=owner)
 
 #عرض العروض المقدمه لصاحب المشروع
+
 class MyProjectOffersView(generics.ListAPIView):
     serializer_class = InvestmentOfferSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         try:
-            project_owner = ProjectOwner.objects.get(user=self.request.user)
+            project_owner = ProjectOwner.objects.get(user=user)
         except ProjectOwner.DoesNotExist:
-            return InvestmentOffer.objects.none()  # لا يوجد عروض إذا المستخدم ليس صاحب مشروع
+            # المستخدم ليس صاحب مشروع، ما يعرض له أي عروض
+            return InvestmentOffer.objects.none()
 
+        # استعلام يعرض فقط عروض الاستثمار التي تخص مشاريع صاحب المشروع الحالي
         return InvestmentOffer.objects.filter(project__owner=project_owner)
 
 

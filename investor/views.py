@@ -1,154 +1,80 @@
-# views.py
-from rest_framework import generics, permissions, status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
-
-from django.db.models import Q, Exists, OuterRef
-
-from .models import InvestmentOffer, Negotiation
-from .serializer import NegotiationSerializer, NegotiationConversationSerializer
-
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Max, Q
+from .models import Negotiation
+from django.contrib.auth import get_user_model
 from projectOwner.models import Project
-from projectOwner.serializer import ProjectDetailsSerializer
+User = get_user_model()
 
-from rest_framework import generics, permissions, status
-from rest_framework.exceptions import PermissionDenied
+from django.db.models import Q, Max, Count, Case, When, BooleanField
+
+class ConversationsListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        negotiations = Negotiation.objects.filter(
+            Q(sender=user) | Q(offer__project__owner__user=user) | Q(offer__investor__user=user)
+        ).select_related('sender', 'offer', 'offer__project__owner__user', 'offer__investor__user')
+
+        last_msgs = negotiations.values('offer').annotate(last_timestamp=Max('timestamp'))
+
+        conversations = []
+        for item in last_msgs:
+            offer_id = item['offer']
+            last_time = item['last_timestamp']
+            last_msg = negotiations.filter(offer_id=offer_id, timestamp=last_time).first()
+
+            offer = last_msg.offer
+
+            # الطرف الآخر في المحادثة
+            if user == last_msg.sender:
+                if user.role == 'investor':
+                    other_user = offer.project.owner.user
+                else:
+                    other_user = offer.investor.user
+            else:
+                other_user = last_msg.sender
+
+            # **نحسب هل هناك رسائل غير مقروءة للمستخدم داخل هذا العرض**
+            unread_exists = negotiations.filter(
+                offer=offer_id,
+                is_read=False
+            ).exclude(sender=user).exists()
+
+            conversations.append({
+                'offer_id': offer_id,
+                'other_user_id': other_user.id,
+                'other_user_full_name': other_user.full_name,
+                'last_message': last_msg.message,
+                'last_message_time': last_msg.timestamp,
+                'is_read': not unread_exists,  # إذا لا يوجد غير مقروءة -> True
+            })
+
+        conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
+
+        return Response(conversations)
+
+
+
+
+
+# views.py
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Q, Exists, OuterRef
-from .models import InvestmentOffer, Negotiation
-from .serializer import NegotiationSerializer, NegotiationConversationSerializer
+from .models import Negotiation
 
-from rest_framework.pagination import PageNumberPagination
-
-
-
-
-class UserNegotiationConversationsView(generics.ListAPIView):
-    serializer_class = NegotiationConversationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-
-        # نجيب العروض التي للمستخدم كمستثمر أو كصاحب مشروع
-        negotiations_subquery = Negotiation.objects.filter(
-            offer=OuterRef('pk')
-        ).filter(
-            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
-        )
-
-        queryset = InvestmentOffer.objects.filter(
-            Q(investor__user=user) | Q(project__owner__user=user)
-        ).annotate(
-            has_user_negotiations=Exists(negotiations_subquery)
-        ).filter(
-            has_user_negotiations=True
-        ).select_related(
-            'investor__user', 'project__owner__user'
-        ).prefetch_related(
-            'negotiations'
-        ).order_by('-id')
-
-        return queryset
-
-
-class NegotiationListCreateView(generics.ListCreateAPIView):
-    serializer_class = NegotiationSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_offer(self):
-        offer_id = self.kwargs['offer_id']
-        try:
-            offer = InvestmentOffer.objects.select_related('project__owner__user', 'investor__user').get(id=offer_id)
-        except InvestmentOffer.DoesNotExist:
-            raise PermissionDenied("العرض غير موجود.")
-        return offer
-
-    def get_queryset(self):
-        offer = self.get_offer()
-        user = self.request.user
-
-        if offer.status == 'rejected':
-            raise PermissionDenied("لا يمكن عرض المحادثة لعرض تم رفضه.")
-
-        if user != offer.project.owner.user and user != offer.investor.user:
-            raise PermissionDenied("غير مصرح لك بعرض هذه المحادثة.")
-
-        return Negotiation.objects.filter(offer=offer).order_by('timestamp')
-
-    def get_serializer_context(self):
-        # هادي الطريقة الصحيحة لتمرير ال context عشان serializer يستخدم request
-        context = super().get_serializer_context()
-        context.update({"request": self.request})
-        return context
-
-    def perform_create(self, serializer):
-        offer = self.get_offer()
-        user = self.request.user
-
-        if offer.status == 'rejected':
-            raise PermissionDenied("لا يمكن إرسال رسائل لعرض تم رفضه.")
-
-        if user != offer.project.owner.user and user != offer.investor.user:
-            raise PermissionDenied("غير مصرح لك بإرسال رسالة.")
-
-        serializer.save(sender=user, offer=offer)
-
-
-
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def mark_negotiation_messages_as_read(request, offer_id):
-    user = request.user
-    try:
-        offer = InvestmentOffer.objects.get(id=offer_id)
-    except InvestmentOffer.DoesNotExist:
-        return Response({'error': 'العرض غير موجود'}, status=404)
-
-    if user != offer.project.owner.user and user != offer.investor.user:
-        return Response({'error': 'غير مصرح لك'}, status=403)
-
-    Negotiation.objects.filter(offer=offer, is_read=False).exclude(sender=user).update(is_read=True)
-    return Response({'status': 'تم تعليم الرسائل كمقروءة'})
-
-
-class RejectOfferView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class MarkMessagesReadAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, offer_id):
-        try:
-            offer = InvestmentOffer.objects.select_related('project__owner__user').get(id=offer_id)
-        except InvestmentOffer.DoesNotExist:
-            return Response({"detail": "العرض غير موجود."}, status=status.HTTP_404_NOT_FOUND)
-
-        if offer.project.owner.user != request.user:
-            return Response({"detail": "غير مصرح لك برفض هذا العرض."}, status=status.HTTP_403_FORBIDDEN)
-
-        offer.status = 'rejected'
-        offer.save()
-
-        return Response({"detail": "تم رفض العرض بنجاح."}, status=status.HTTP_200_OK)
-
-
-class AllProjectsListView(generics.ListAPIView):
-    """
-    عرض جميع المشاريع النشطة أو التي هي تحت التفاوض، للمستثمرين فقط
-    """
-    serializer_class = ProjectDetailsSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-
-        # التحقق من أن المستخدم مستثمر فقط
-        if not hasattr(user, 'role') or user.role != 'investor':
-            raise PermissionDenied("فقط المستثمر يمكنه رؤية هذه المشاريع.")
-
-        return Project.objects.filter(
-            Q(status='active') | Q(status='under_negotiation')
-        )
+        user = request.user
+        # تعيين كل الرسائل غير المقروءة للعرض offer_id والتي ليست من المرسل الحالي كمقروءة
+        Negotiation.objects.filter(
+            offer_id=offer_id,
+            is_read=False
+        ).exclude(sender=user).update(is_read=True)
+        return Response({"detail": "Messages marked as read."})
