@@ -25,29 +25,46 @@ from django.db.models import Q, Exists, OuterRef
 from django.db.models import Q, Exists, OuterRef
 from .models import InvestmentOffer, Negotiation  # تأكد من استيراد الموديلات
 
+from rest_framework.pagination import PageNumberPagination
+
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10 # عدد العناصر في كل صفحة
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class UserNegotiationConversationsView(generics.ListAPIView):
     serializer_class = NegotiationConversationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
 
-        # التحقق من وجود مفاوضات تخص هذا المستخدم فقط
         negotiations_subquery = Negotiation.objects.filter(
             offer=OuterRef('pk')
         ).filter(
-            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
-
+            Q(sender=user) |
+            Q(offer__investor__user=user) |
+            Q(offer__project__owner__user=user)
         )
 
-        # عرض فقط العروض التي للمستخدم دور فيها + تحتوي على مفاوضات تخصه هو فقط
-        return InvestmentOffer.objects.filter(
+        queryset = InvestmentOffer.objects.filter(
             Q(investor__user=user) | Q(project__owner__user=user)
         ).annotate(
             has_user_negotiations=Exists(negotiations_subquery)
         ).filter(
             has_user_negotiations=True
-        )
+        ).select_related(
+            'investor__user', 'project__owner__user'
+        ).prefetch_related(
+            'negotiations'
+        ).order_by('-id')  # ← الترتيب هنا لحل المشكلة
+
+        return queryset
+
+
 
 
 

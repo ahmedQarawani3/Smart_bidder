@@ -39,7 +39,7 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     last_message_time = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
-    messages = serializers.SerializerMethodField()
+   # messages = serializers.SerializerMethodField()
 
     class Meta:
         model = InvestmentOffer
@@ -50,26 +50,30 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
             'last_message',
             'last_message_time',
             'unread_count',
-            'messages',
+           # 'messages',
         ]
 
     def get_project_title(self, obj):
         return obj.project.title
 
     def get_other_user_name(self, obj):
-        user = self.context['request'].user
+        request = self.context.get('request')
+        user = request.user
+
         if user == obj.project.owner.user:
-            return obj.investor.user.get_full_name()
+            return obj.investor.user.full_name
         elif user == obj.investor.user:
-            return obj.project.owner.user.get_full_name()
+            return obj.project.owner.user.full_name
         return None
 
+
+
     def get_last_message(self, obj):
-        user = self.context['request'].user
-        last = obj.negotiations.filter(
-            Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
-        ).order_by('-timestamp').first()
-        return last.message if last else ""
+        last = obj.negotiations.order_by('-timestamp').first()
+        if last:
+            return f"{last.sender.full_name}: {last.message}"
+        return ""
+
 
     def get_last_message_time(self, obj):
         user = self.context['request'].user
@@ -91,19 +95,22 @@ class NegotiationConversationSerializer(serializers.ModelSerializer):
         messages_qs = obj.negotiations.filter(
             Q(sender=user) | Q(offer__investor__user=user) | Q(offer__project__owner__user=user)
         ).order_by('timestamp')
-        return NegotiationMessageSerializer(messages_qs, many=True).data
-
-
+        return NegotiationMessageSerializer(messages_qs, many=True, context={'request': self.context['request']}).data
+   
 
 
 class NegotiationMessageSerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(source='sender.get_full_name')
+    sender_name = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = Negotiation
         fields = ['id', 'message', 'timestamp', 'is_read', 'sender_name', 'is_owner']
 
+    def get_sender_name(self, obj):
+        return obj.sender.full_name
+
     def get_is_owner(self, obj):
         request = self.context.get('request')
         return request and obj.sender == request.user
+
