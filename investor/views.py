@@ -16,40 +16,36 @@ class ConversationsListAPIView(APIView):
         user = request.user
 
         if user.role == 'investor':
-            negotiations = Negotiation.objects.filter(investor=user)
+            negotiations = Negotiation.objects.filter(sender=user) | Negotiation.objects.filter(offer__investor=user)
+            negotiations = negotiations.distinct()
         elif user.role == 'owner':
             negotiations = Negotiation.objects.filter(offer__project__owner__user=user)
         else:
             return Response({'detail': 'Unauthorized'}, status=403)
 
-        last_msgs = negotiations.values('offer', 'investor').annotate(last_timestamp=Max('timestamp'))
+        # استخراج آخر رسالة في كل محادثة بين (عرض - مستثمر)
+        last_msgs = negotiations.values('offer_id').annotate(last_timestamp=Max('timestamp'))
 
         conversations = []
         for item in last_msgs:
-            offer_id = item['offer']
-            investor_id = item['investor']
+            offer_id = item['offer_id']
             last_time = item['last_timestamp']
-            last_msg = negotiations.filter(offer_id=offer_id, investor_id=investor_id, timestamp=last_time).first()
 
+            last_msg = Negotiation.objects.filter(offer_id=offer_id, timestamp=last_time).first()
             offer = last_msg.offer
 
-            if user == last_msg.sender:
-                if user.role == 'investor':
-                    other_user = offer.project.owner.user
-                else:
-                    other_user = last_msg.investor
+            if user.role == 'investor':
+                other_user = offer.project.owner.user
             else:
-                other_user = last_msg.sender
+                other_user = offer.investor
 
-            unread_exists = negotiations.filter(
-                offer=offer_id,
-                investor=investor_id,
+            unread_exists = Negotiation.objects.filter(
+                offer_id=offer_id,
                 is_read=False
             ).exclude(sender=user).exists()
 
             conversations.append({
                 'offer_id': offer_id,
-                'investor_id': investor_id,
                 'other_user_id': other_user.id,
                 'other_user_full_name': other_user.full_name,
                 'last_message': last_msg.message,
@@ -58,8 +54,8 @@ class ConversationsListAPIView(APIView):
             })
 
         conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
-
         return Response(conversations)
+
 
 
 
@@ -90,7 +86,7 @@ from .serializer import NegotiationSerializer
 class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, offer_id, investor_id):
+    def post(self, request, offer_id):
         user = request.user
         message = request.data.get('message')
 
@@ -104,13 +100,12 @@ class SendMessageAPIView(APIView):
         if user.role == 'owner' and offer.project.owner.user != user:
             return Response({'detail': 'Unauthorized'}, status=403)
 
-        if user.role == 'investor' and (user.id != int(investor_id) or offer.investor.id != user.id):
+        if user.role == 'investor' and offer.investor != user:
             return Response({'detail': 'Unauthorized'}, status=403)
 
         negotiation = Negotiation.objects.create(
             offer=offer,
             sender=user,
-            investor=User.objects.get(id=investor_id),
             message=message,
             is_read=False
         )
@@ -119,20 +114,24 @@ class SendMessageAPIView(APIView):
         return Response(serializer.data)
 
 
+
 class ConversationDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, offer_id, investor_id):
+    def get(self, request, offer_id):
         user = request.user
-
         offer = InvestmentOffer.objects.filter(id=offer_id).first()
+
         if not offer:
             return Response({'detail': 'Offer not found'}, status=404)
 
-        if not (user.role == 'owner' and offer.project.owner.user == user) and not (user.role == 'investor' and user.id == int(investor_id)):
+        if not (
+            (user.role == 'owner' and offer.project.owner.user == user) or
+            (user.role == 'investor' and offer.investor == user)
+        ):
             return Response({'detail': 'Unauthorized access'}, status=403)
 
-        negotiations = Negotiation.objects.filter(offer=offer, investor__id=investor_id).order_by('timestamp')
+        negotiations = Negotiation.objects.filter(offer=offer).order_by('timestamp')
 
         unread_messages = negotiations.filter(is_read=False).exclude(sender=user)
         unread_messages.update(is_read=True)
