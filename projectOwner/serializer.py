@@ -144,6 +144,7 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
 
 class ProjectDetailsSerializer(serializers.ModelSerializer):
     feasibility_study = FeasibilityStudySerializer()
+    files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
 
     class Meta:
         model = Project
@@ -151,8 +152,9 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "id", "title", "description", "status",
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
-            "feasibility_study",
+            "feasibility_study", "files"
         ]
+
 
     def update(self, instance, validated_data):
         feasibility_data = validated_data.pop('feasibility_study', None)

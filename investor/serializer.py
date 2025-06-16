@@ -58,3 +58,32 @@ class NegotiationSerializer(serializers.ModelSerializer):
         return False
 
 
+from projectOwner.models import Project
+#عرض المشاريغ للمستثمر بدون تفاضيل
+class ProjectFundingSerializer(serializers.ModelSerializer):
+    funding_required = serializers.SerializerMethodField()
+    expected_monthly_revenue=serializers.SerializerMethodField()
+    class Meta:
+        model = Project
+        fields = [
+            "id", "title", "description", "status",
+            "category", "readiness_level", "idea_summary",
+            "problem_solving", "created_at", 
+            "funding_required","expected_monthly_revenue"
+        ]
+    def get_funding_required(self, obj):
+        if hasattr(obj, 'feasibility_study') and obj.feasibility_study:
+            return obj.feasibility_study.funding_required
+        return None
+
+    def get_expected_monthly_revenue(self, obj):
+        if hasattr(obj, 'feasibility_study') and obj.feasibility_study:
+            return obj.feasibility_study.expected_monthly_revenue
+        return None
+from rest_framework import serializers
+from .models import InvestmentOffer
+
+class InvestmentOfferCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvestmentOffer
+        fields = ['amount', 'equity_percentage', 'additional_terms']

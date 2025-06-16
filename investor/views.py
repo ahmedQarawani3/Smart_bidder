@@ -152,4 +152,126 @@ class ConversationDetailAPIView(APIView):
         serializer = NegotiationSerializer(negotiations, many=True, context={'request': request})
         return Response(serializer.data)
 
+from rest_framework import generics, permissions, status
+from projectOwner.serializer import ProjectDetailsSerializer
 
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+#عرض تفاصبل المشروع للمسثمر 
+class ProjectDetailView(RetrieveAPIView):
+    """
+    عرض تفاصيل مشروع معين عند الضغط عليه من قبل المستثمر
+    """
+    queryset = Project.objects.all()
+    serializer_class = ProjectDetailsSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+
+        # التحقق من أن المستخدم مستثمر فقط
+        if not hasattr(user, 'role') or user.role != 'investor':
+            raise PermissionDenied("فقط المستثمر يمكنه رؤية تفاصيل المشروع.")
+
+        return super().get_object()
+
+from rest_framework.exceptions import PermissionDenied
+from rest_framework import generics, permissions
+from django.db.models import Q
+from .serializer import ProjectFundingSerializer
+#عرض المشاريع للمستثمر
+class ProjectFundingOnlyListView(generics.ListAPIView):
+    """
+    عرض المشاريع مع التمويل المطلوب فقط، للمستثمرين فقط
+    """
+    serializer_class = ProjectFundingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if not hasattr(user, 'role') or user.role != 'investor':
+            raise PermissionDenied("فقط المستثمر يمكنه رؤية هذه المشاريع.")
+
+        return Project.objects.filter(
+            Q(status='active') | Q(status='under_negotiation')
+        )
+
+
+from rest_framework import generics, permissions
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Project, InvestmentOffer
+from .serializer import InvestmentOfferCreateSerializer
+
+class CreateInvestmentOfferView(generics.CreateAPIView):
+    """
+    مستثمر يرسل عرض استثماري على مشروع
+    """
+    serializer_class = InvestmentOfferCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+
+        # تحقق أن المستخدم مستثمر
+        if not hasattr(user, 'role') or user.role != 'investor':
+            raise PermissionDenied("فقط المستثمر يمكنه إرسال عروض استثمارية.")
+
+        project_id = self.kwargs.get('project_id')
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            raise PermissionDenied("المشروع غير موجود.")
+
+        # حفظ العرض
+        serializer.save(investor=user.investor, project=project)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.db.models import Q
+from projectOwner.serializer import ProjectSerializer
+
+
+class FilteredProjectList(APIView):
+    def get(self, request):
+        projects = Project.objects.filter(status='active')
+
+        category = request.GET.get('category')
+        readiness_level = request.GET.get('readiness_level')
+        min_funding = request.GET.get('min_funding')
+        max_funding = request.GET.get('max_funding')
+        max_roi_period = request.GET.get('max_roi_period')
+        sort_by = request.GET.get('sort_by')
+
+        # فلتر التصنيف
+        if category and category != 'all':
+            projects = projects.filter(category=category)
+
+        # فلتر الجاهزية
+        if readiness_level and readiness_level != 'all':
+            projects = projects.filter(readiness_level=readiness_level)
+
+        # فلتر التمويل
+        if min_funding:
+            projects = projects.filter(feasibility_study__funding_required__gte=min_funding)
+
+        if max_funding:
+            projects = projects.filter(feasibility_study__funding_required__lte=max_funding)
+
+        # فلتر فترة استرداد رأس المال
+        if max_roi_period:
+            projects = projects.filter(feasibility_study__roi_period_months__lte=max_roi_period)
+
+        # ترتيب النتائج
+        if sort_by == 'newest':
+            projects = projects.order_by('-created_at')
+        elif sort_by == 'oldest':
+            projects = projects.order_by('created_at')
+
+        serializer = ProjectSerializer(projects, many=True)
+        return Response(serializer.data)
