@@ -54,22 +54,22 @@ class ConversationsListAPIView(APIView):
 
         if user.role == 'investor':
             try:
-                investor = user.investor  
+                investor = user.investor
             except Investor.DoesNotExist:
                 return Response({'detail': 'Investor profile not found.'}, status=404)
 
-            negotiations = Negotiation.objects.filter(
-                Q(sender=user) | Q(offer__investor=investor)
-            ).distinct()
-
+            offers = InvestmentOffer.objects.filter(investor=investor)
+        
         elif user.role == 'owner':
-            negotiations = Negotiation.objects.filter(
-                offer__project__owner__user=user
-            )
-
+            offers = InvestmentOffer.objects.filter(project__owner__user=user)
+        
         else:
             return Response({'detail': 'Unauthorized'}, status=403)
 
+        # الآن نحصر المفاوضات فقط على العروض اللي إله
+        negotiations = Negotiation.objects.filter(offer__in=offers)
+
+        # استخرج آخر رسالة لكل عرض
         last_msgs = negotiations.values('offer_id').annotate(last_timestamp=Max('timestamp'))
 
         conversations = []
@@ -108,6 +108,7 @@ class ConversationsListAPIView(APIView):
         conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
 
         return Response(conversations)
+
 
 
 #تعيين الرسائل كمقروءة
@@ -178,7 +179,7 @@ class ConversationDetailAPIView(APIView):
 
         if not (
             (user.role == 'owner' and offer.project.owner.user == user) or
-            (user.role == 'investor' and offer.investor.user == user)
+            (user.role == 'investor' and hasattr(user, 'investor') and offer.investor == user.investor)
         ):
             return Response({'detail': 'Unauthorized access'}, status=403)
 
@@ -298,4 +299,41 @@ class FilteredProjectList(APIView):
             projects = projects.order_by('created_at')
 
         serializer = ProjectSerializer(projects, many=True)
+        return Response(serializer.data)
+
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.db.models import Sum
+from .serializer import OfferStatisticsSerializer
+#عرض من عند صفحه العروض من فوق تبع كم عرض مقدك وهدول الشغلات
+class InvestorOfferStatisticsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if not hasattr(user, 'investor'):
+            return Response({'detail': 'User is not an investor.'}, status=403)
+
+        offers = InvestmentOffer.objects.filter(investor=user.investor)
+
+        total_offers = offers.count()
+        pending_offers = offers.filter(status='pending').count()
+        accepted_offers = offers.filter(status='accepted').count()
+        rejected_offers = offers.filter(status='rejected').count()
+        total_invested_amount = offers.filter(status='accepted').aggregate(
+            total=Sum('amount'))['total'] or 0
+
+        data = {
+            "total_offers": total_offers,
+            "pending_offers": pending_offers,
+            "accepted_offers": accepted_offers,
+            "rejected_offers": rejected_offers,
+            "total_invested_amount": total_invested_amount,
+        }
+
+        serializer = OfferStatisticsSerializer(data)
         return Response(serializer.data)

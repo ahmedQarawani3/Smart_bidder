@@ -87,3 +87,12 @@ class InvestmentOfferCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvestmentOffer
         fields = ['amount', 'equity_percentage', 'additional_terms']
+
+#عرض من عند صفحه العروض من فوق تبع كم عرض مقدك وهدول الشغلات
+
+class OfferStatisticsSerializer(serializers.Serializer):
+    total_offers = serializers.IntegerField()
+    pending_offers = serializers.IntegerField()
+    accepted_offers = serializers.IntegerField()
+    rejected_offers = serializers.IntegerField()
+    total_invested_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
