@@ -252,3 +252,5 @@ class MyProjectDetailView(APIView):
 
         serializer = ProjectDetailsSerializer(project)
         return Response(serializer.data, status=status.HTTP_200_OK)
+# views.py
+

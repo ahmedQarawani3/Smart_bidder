@@ -19,7 +19,7 @@ urlpatterns = [
     path('dashboard/', ProjectOwnerDashboardView.as_view(), name='projectowner-dashboard'),#11
     path('my-projects/', ProjectOwnerProjectsAPIView.as_view(), name='my-projects'),
     path('project-owner/offers/', FilteredOffersView.as_view(), name='filtered-investment-offers'),#11
-    path('my-projectss/<int:project_id>/', MyProjectDetailView.as_view(), name='my-project-detail')
+    path('my-projectss/<int:project_id>/', MyProjectDetailView.as_view(), name='my-project-detail'),
 
 
 

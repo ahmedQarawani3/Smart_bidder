@@ -9,6 +9,7 @@ from django.urls import path
 from .views import ConversationsListAPIView
 from .views import ConversationDetailAPIView
 from .views import InvestorOfferStatisticsAPIView
+from .views import MyOffersListAPIView
 
 from .views import MarkMessagesReadAPIView,SendMessageAPIView,ProjectDetailView,ProjectFundingOnlyListView,CreateInvestmentOfferView,FilteredProjectList
 
@@ -26,5 +27,6 @@ urlpatterns = [
     path('<int:project_id>/offers/create/', CreateInvestmentOfferView.as_view(), name='create-investment-offer'),
     path('projects/filter/', FilteredProjectList.as_view(), name='filtered-projects'),
     path('offer-statistics/', InvestorOfferStatisticsAPIView.as_view(), name='investor-offer-statistics'),
+    path('my-offers/', MyOffersListAPIView.as_view(), name='my-investment-offers')
 
 ]

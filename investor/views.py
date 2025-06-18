@@ -337,3 +337,26 @@ class InvestorOfferStatisticsAPIView(APIView):
 
         serializer = OfferStatisticsSerializer(data)
         return Response(serializer.data)
+
+from .serializer import InvestmentOfferSerializer
+
+class MyOffersListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # تحقق من أن المستخدم هو مستثمر
+        if user.role != 'investor':
+            return Response({'detail': 'Unauthorized'}, status=403)
+
+        try:
+            investor = user.investor
+        except:
+            return Response({'detail': 'Investor profile not found.'}, status=404)
+
+        # جلب كل العروض المقدمة من هذا المستثمر
+        offers = InvestmentOffer.objects.filter(investor=investor).select_related('project')
+
+        serializer = InvestmentOfferSerializer(offers, many=True)
+        return Response(serializer.data)

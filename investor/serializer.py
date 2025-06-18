@@ -96,3 +96,18 @@ class OfferStatisticsSerializer(serializers.Serializer):
     accepted_offers = serializers.IntegerField()
     rejected_offers = serializers.IntegerField()
     total_invested_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+#عرض كل المشاريع يلي قدم عليها المستثمر
+class ProjectMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'category', 'status', 'readiness_level']
+#عرض كل المشاريع يلي قدم عليها المستثمر
+class InvestmentOfferSerializer(serializers.ModelSerializer):
+    project = ProjectMiniSerializer()  # ربط العرض بالمشروع المصغر
+
+    class Meta:
+        model = InvestmentOffer
+        fields = [
+            'id', 'amount', 'equity_percentage', 'additional_terms', 
+            'status', 'created_at', 'updated_at', 'project'
+        ]
