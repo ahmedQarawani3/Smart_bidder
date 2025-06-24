@@ -360,3 +360,14 @@ class MyOffersListAPIView(APIView):
 
         serializer = InvestmentOfferSerializer(offers, many=True)
         return Response(serializer.data)
+
+
+from rest_framework import generics, permissions
+from .serializer import InvestorUpdateSerializer
+
+class UpdateInvestorProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = InvestorUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.investor

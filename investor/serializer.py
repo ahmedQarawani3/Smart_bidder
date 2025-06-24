@@ -111,3 +111,34 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
             'id', 'amount', 'equity_percentage', 'additional_terms', 
             'status', 'created_at', 'updated_at', 'project'
         ]
+from rest_framework import serializers
+from accounts.models import User
+from .models import Investor
+class InvestorUpdateSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.full_name', required=False)
+    email = serializers.EmailField(source='user.email', required=False)
+    phone_number = serializers.CharField(source='user.phone_number', required=False)
+
+    class Meta:
+        model = Investor
+        fields = [
+            'full_name',
+            'email',
+            'phone_number',
+            'company_name',
+            'commercial_register',
+            'profile_picture',
+            'id_card_picture',
+        ]
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
