@@ -6,6 +6,7 @@ from investor.models import InvestmentOffer
 from projectOwner.models import Project
 from investor.models import Negotiation
 from accounts.utils import notify_user, notify_users
+from .models import Notification  
 
 # ✅ إشعار تلقائي عند إنشاء مشروع جديد
 @receiver(post_save, sender=Project)

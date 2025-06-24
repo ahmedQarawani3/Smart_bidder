@@ -1,16 +1,8 @@
 from django.apps import AppConfig
 
-
 class AccountsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'accounts'
-from django.apps import AppConfig
-
-
-
-class ProjectsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'projects'
 
     def ready(self):
-        import projects.signals
+        import accounts.signals  # ✅ هذا هو السيغنال الصحيح
