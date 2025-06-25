@@ -131,3 +131,52 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'message', 'is_read', 'created_at']
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator, PasswordResetTokenGenerator
+from django.conf import settings
+import string
+import random
+
+User = get_user_model()
+
+def generate_random_password(length=8):
+    # Generate a random password with letters and digits
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if not User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("No user found with this email address.")
+        return value
+
+    def save(self):
+        email = self.validated_data["email"].strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+
+        if user:
+            # Generate new random password
+            new_password = generate_random_password()
+            # Set new password
+            user.set_password(new_password)
+            user.save()
+
+            # Send the new password via email
+            send_mail(
+                "Your New Password",
+                f"Your password has been reset. Your new password is:\n\n{new_password}\n\nPlease change it after logging in.",
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+
+
+
+

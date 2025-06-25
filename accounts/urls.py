@@ -8,8 +8,10 @@ from .views import (
     MarkAllNotificationsAsReadView,
     DeleteNotificationView
 )
+from .views import PasswordResetRequestView
+
 urlpatterns = [
-    path('register/project-owner', ProjectOwnerRegisterView.as_view(), name='project_owner_register'),
+    path('register/project-owner/', ProjectOwnerRegisterView.as_view(), name='project_owner_register'),
     path('login/', LoginView.as_view(), name='login'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('register/investor/',InvestorRegisterView.as_view(),name='investor_register'),
@@ -17,4 +19,5 @@ urlpatterns = [
     path('notifications/<int:pk>/mark-read/', MarkNotificationAsReadView.as_view(), name='notification-mark-read'),
     path('notifications/mark-all-read/', MarkAllNotificationsAsReadView.as_view(), name='notification-mark-all-read'),
     path('notifications/<int:pk>/delete/', DeleteNotificationView.as_view(), name='notification-delete'),
+    path('reset-password/', PasswordResetRequestView.as_view(), name='password_reset_request'),
 ]

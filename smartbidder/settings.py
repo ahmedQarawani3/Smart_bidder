@@ -166,11 +166,13 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React frontend
 ]
 
- 
+FRONTEND_URL = "http://localhost:3000"  # ✅ عدّله حسب عنوان مشروع React الخاص بك
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp-relay.brevo.com'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = '8da377001@smtp-brevo.com'
-EMAIL_HOST_PASSWORD = 'pzhGCvHM6a59KWPt'
+EMAIL_HOST_USER = 'ahmedqarawani419@gmail.com'  # ✨ ضع بريدك
+EMAIL_HOST_PASSWORD = 'ovfz xzjz gjma jhgb'  # ✨ استخدم app password من إعدادات Gmail
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+

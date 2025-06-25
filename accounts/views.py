@@ -103,3 +103,22 @@ class DeleteNotificationView(APIView):
             return Response({'detail': 'Notification deleted'})
         except Notification.DoesNotExist:
             return Response({'detail': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+# accounts/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+from .serializer import PasswordResetRequestSerializer
+
+
+# إرسال رابط إعادة التعيين
+class PasswordResetRequestView(APIView):
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'detail': 'A new password has been sent to your email.'})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
