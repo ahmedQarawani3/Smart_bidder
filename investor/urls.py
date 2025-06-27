@@ -9,7 +9,7 @@ from django.urls import path
 from .views import ConversationsListAPIView
 from .views import ConversationDetailAPIView
 from .views import InvestorOfferStatisticsAPIView
-from .views import MyOffersListAPIView,UpdateInvestorProfileView
+from .views import MyOffersListAPIView,UpdateInvestorProfileView,RejectOfferView
 
 from .views import MarkMessagesReadAPIView,SendMessageAPIView,ProjectDetailView,ProjectFundingOnlyListView,CreateInvestmentOfferView,FilteredProjectList
 
@@ -17,7 +17,7 @@ urlpatterns = [
    # path('conversations/', UserNegotiationConversationsView.as_view(), name='user-conversations'),
     #path('negotiations/<int:offer_id>/', NegotiationListCreateView.as_view(), name='negotiation-list-create'),
     #path('negotiations/<int:offer_id>/mark-read/', mark_negotiation_messages_as_read, name='mark-negotiation-read'),   
-    #path('offers/<int:offer_id>/reject/', RejectOfferView.as_view(), name='reject-offer'),
+    path('offers/<int:offer_id>/reject/', RejectOfferView.as_view(), name='reject-offer'),
     path('projects/<int:pk>/', ProjectDetailView.as_view(), name='project-detail'),  # جديد
     path('conversations/', ConversationsListAPIView.as_view(), name='conversations-list'),
     path('conversations/<int:offer_id>/', ConversationDetailAPIView.as_view(), name='conversation-detail'),

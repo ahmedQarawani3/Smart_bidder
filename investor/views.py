@@ -371,3 +371,22 @@ class UpdateInvestorProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user.investor
+
+
+
+class RejectOfferView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, offer_id):
+        try:
+            offer = InvestmentOffer.objects.select_related('project__owner__user').get(id=offer_id)
+        except InvestmentOffer.DoesNotExist:
+            return Response({"detail": "Offer not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if offer.project.owner.user != request.user:
+            return Response({"detail": "You are not authorized to reject this offer."}, status=status.HTTP_403_FORBIDDEN)
+
+        offer.status = 'rejected'
+        offer.save()
+
+        return Response({"detail": "Offer rejected successfully."}, status=status.HTTP_200_OK)
