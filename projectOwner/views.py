@@ -237,6 +237,7 @@ class FilteredOffersView(generics.ListAPIView):
 
 
 from .serializer import ProjectDetailsSerializer
+from .utils import auto_close_project_if_expired
 
 class MyProjectDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -246,11 +247,14 @@ class MyProjectDetailView(APIView):
             project_owner = ProjectOwner.objects.get(user=request.user)
             project = Project.objects.get(id=project_id, owner=project_owner)
         except ProjectOwner.DoesNotExist:
-            return Response({"detail": "You are not registered as a project owner."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You are not registered as a project owner."}, status=403)
         except Project.DoesNotExist:
-            return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "Project not found."}, status=404)
+
+        # تحقق من إغلاق المشروع تلقائيًا عند عرض التفاصيل
+        auto_close_project_if_expired(project)
 
         serializer = ProjectDetailsSerializer(project)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 # views.py
 

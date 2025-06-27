@@ -1,6 +1,7 @@
 from .models import Project, ProjectFile,FeasibilityStudy,ProjectOwner
 from investor.models import Investor,InvestmentOffer
 from rest_framework import serializers
+from .utils import START_DATE
 
 class ProjectFileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -141,10 +142,12 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
             "growth_opportunity",
         ]
 
-
+from datetime import timedelta
+from django.utils import timezone
 class ProjectDetailsSerializer(serializers.ModelSerializer):
     feasibility_study = FeasibilityStudySerializer()
     files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
+    time_left_to_auto_close = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -152,19 +155,33 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "id", "title", "description", "status",
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
-            "feasibility_study", "files"
+            "feasibility_study", "files", "time_left_to_auto_close"
         ]
 
+    def get_time_left_to_auto_close(self, project):
+        offers = InvestmentOffer.objects.filter(
+            project=project,
+            created_at__gte=START_DATE
+        ).order_by('created_at')
+
+        if not offers.exists():
+            return "No investment offers yet"
+
+        first_offer = offers.first()
+        deadline = first_offer.created_at + timedelta(days=20)
+        remaining = (deadline - timezone.now()).days
+
+        if remaining <= 0:
+            return "Project should be closed"
+        return f"{remaining} day(s) left until auto-close"
 
     def update(self, instance, validated_data):
         feasibility_data = validated_data.pop('feasibility_study', None)
 
-        # تحديث بيانات المشروع العادية
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # تحديث بيانات الجدوى الاقتصادية إن وجدت
         if feasibility_data:
             feasibility_instance = instance.feasibility_study
             for attr, value in feasibility_data.items():

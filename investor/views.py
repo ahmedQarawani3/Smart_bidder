@@ -236,29 +236,25 @@ class ProjectFundingOnlyListView(generics.ListAPIView):
             Q(status='active') | Q(status='under_negotiation')
         )
 
+from projectOwner.utils import auto_close_project_if_expired
 
 class CreateInvestmentOfferView(generics.CreateAPIView):
-    """
-    مستثمر يرسل عرض استثماري على مشروع
-    """
     serializer_class = InvestmentOfferCreateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         user = self.request.user
 
-        # تحقق أن المستخدم مستثمر
         if not hasattr(user, 'role') or user.role != 'investor':
-            raise PermissionDenied("فقط المستثمر يمكنه إرسال عروض استثمارية.")
+            raise PermissionDenied("Only investors can send offers.")
 
         project_id = self.kwargs.get('project_id')
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            raise PermissionDenied("المشروع غير موجود.")
+        project = get_object_or_404(Project, id=project_id)
 
-        # حفظ العرض
-        serializer.save(investor=user.investor, project=project)
+        offer = serializer.save(investor=user.investor, project=project)
+
+        # التحقق من إغلاق المشروع تلقائيًا بعد العرض
+        auto_close_project_if_expired(project)
 
 
 
