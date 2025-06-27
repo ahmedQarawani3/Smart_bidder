@@ -27,6 +27,7 @@ from rest_framework import generics, permissions
 from .models import Project
 from .serializer import ProjectListSerializer
 from django.db.models import Q
+from accounts.utils import notify_user
 
 from django.db.models.functions import Coalesce
 from django.db.models import Value
@@ -129,9 +130,23 @@ class MyProjectUpdateView(APIView):
         serializer = ProjectDetailsSerializer(instance=project, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+
+            # ✅ رفض العروض إذا كانت موجودة
+            offers = InvestmentOffer.objects.filter(project=project, status='pending')
+
+            for offer in offers:
+                offer.status = 'rejected'
+                offer.save()
+                print(f"Rejected offer ID: {offer.id} for investor {offer.investor.user}")
+
+                message = f"Your offer for '{project.title}' has been rejected due to project updates by the owner."
+                notify_user(offer.investor.user, message)
+
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 #عرض active_projects_count وtotal_funding_required وtotal_investors_connected وpending_offers
