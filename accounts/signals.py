@@ -36,3 +36,28 @@ def notify_negotiation_started(sender, instance, created, **kwargs):
         message = f"{instance.sender.full_name} wants to negotiate terms for your investment offer"
         notify_user(other_party, message)
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
+
+@receiver(post_save, sender=User)
+def notify_user_account_activated(sender, instance, created, **kwargs):
+    if not created:
+        # فقط إذا صار تفعيل جديد
+        old_user = User.objects.filter(pk=instance.pk).first()
+        if old_user and not kwargs.get('raw', False):  # ignore during fixtures
+            if not old_user.is_active and instance.is_active:
+                subject = 'Account Activated'
+                message = f'Hello {instance.full_name}, your account has been activated. You can now log in to your account.'
+                from_email = settings.DEFAULT_FROM_EMAIL
+                recipient_list = [instance.email]
+                send_mail(subject, message, from_email, recipient_list)
+
