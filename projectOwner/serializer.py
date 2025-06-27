@@ -73,7 +73,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 #هاد تمام عرض العروض المقدمه لصاحب المشروع مع فلاره
 class InvestmentOfferSerializer(serializers.ModelSerializer):
-    investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)  
+    investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)
+    project_title = serializers.CharField(source='project.title', read_only=True)  # ⬅️ الجديد
 
     class Meta:
         model = InvestmentOffer
@@ -85,8 +86,10 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
             'status',
             'created_at',
             'investor_name',
+            'project_title',  # ⬅️ الجديد
             'project',
         ]
+
 
 
 class OfferStatusUpdateSerializer(serializers.ModelSerializer):
@@ -148,6 +151,8 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
     feasibility_study = FeasibilityStudySerializer()
     files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
     time_left_to_auto_close = serializers.SerializerMethodField()
+    owner_name = serializers.CharField(source='owner.user.full_name', read_only=True)
+
 
     class Meta:
         model = Project
@@ -155,7 +160,8 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "id", "title", "description", "status",
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
-            "feasibility_study", "files", "time_left_to_auto_close"
+            "feasibility_study", "files", "time_left_to_auto_close",
+            "owner_name", 
         ]
 
     def get_time_left_to_auto_close(self, project):
