@@ -4,7 +4,7 @@ from investor.models import InvestmentOffer
 from accounts.utils import notify_user
 
 # تاريخ بداية احتساب العروض (عدّل التاريخ حسب يوم بدء تفعيل النظام)
-START_DATE = timezone.make_aware(datetime(2025, 3, 1, 0, 0, 0))
+START_DATE = timezone.make_aware(datetime(2025, 6, 27, 0, 0, 0))
 
 def auto_close_project_if_expired(project):
     offers = InvestmentOffer.objects.filter(
