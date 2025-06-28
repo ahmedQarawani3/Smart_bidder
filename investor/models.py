@@ -12,7 +12,7 @@ class Investor(models.Model):
     phone_number = models.CharField(max_length=20)
     profile_picture = models.ImageField(upload_to='investors/', blank=True, null=True)
     id_card_picture = models.ImageField(upload_to='investors/id_cards/', blank=True, null=True)
-
+    commercial_register_picture= models.ImageField(upload_to='investors/commercial/', blank=True, null=True)
     def clean(self):
         if not self.commercial_register and not self.id_card_picture:
             raise ValidationError("If commercial register is not provided, a personal ID card picture is required.")
