@@ -82,14 +82,16 @@ WSGI_APPLICATION = 'smartbidder.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'railway',
-        'USER': 'postgres',
-        'PASSWORD': 'fYHErXRICoEVhEGJfGaZVJExlxEhDIae',
-        'HOST': 'caboose.proxy.rlwy.net',
-        'PORT': '59507',
+        'NAME': os.getenv('PGDATABASE', 'railway'),
+        'USER': os.getenv('PGUSER', 'postgres'),
+        'PASSWORD': os.getenv('PGPASSWORD', 'fYHErXRICoEVhEGJfGaZVJExlxEhDIae'),
+        'HOST': os.getenv('PGHOST', 'caboose.proxy.rlwy.net'),
+        'PORT': os.getenv('PGPORT', '59507'),
     }
 }
 
