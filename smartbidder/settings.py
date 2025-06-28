@@ -177,3 +177,6 @@ EMAIL_HOST_USER = 'ahmedqarawani419@gmail.com'  # ✨ ضع بريدك
 EMAIL_HOST_PASSWORD = 'ovfz xzjz gjma jhgb'  # ✨ استخدم app password من إعدادات Gmail
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+STATIC_URL = '/static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
