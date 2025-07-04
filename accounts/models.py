@@ -18,6 +18,7 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20)  
     created_at = models.DateTimeField(default=timezone.now)  
     updated_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)  # 👈 المستخدم غير مفعل حتى موافقة الأدمن
 
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email', 'role', 'phone_number']

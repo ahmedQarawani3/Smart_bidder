@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'projectOwner',
     'rest_framework_simplejwt',
     'corsheaders',
+    'adminAccounts'
 ]
 
 
@@ -81,19 +82,38 @@ WSGI_APPLICATION = 'smartbidder.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+USE_LOCAL_DB=True
 
 import os
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('PGDATABASE', 'railway'),
-        'USER': os.getenv('PGUSER', 'postgres'),
-        'PASSWORD': os.getenv('PGPASSWORD', 'fYHErXRICoEVhEGJfGaZVJExlxEhDIae'),
-        'HOST': os.getenv('PGHOST', 'caboose.proxy.rlwy.net'),
-        'PORT': os.getenv('PGPORT', '59507'),
+import os
+
+import os
+
+if os.getenv("USE_LOCAL_DB", "true") == "true":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'my_local_db',
+            'USER': 'postgres',
+            'PASSWORD': 'ahmad123654',  # كلمة مرور postgres المحلية عندك
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('PGDATABASE', 'railway'),
+            'USER': os.getenv('PGUSER', 'postgres'),
+            'PASSWORD': os.getenv('PGPASSWORD', 'fYHErXRICoEVhEGJfGaZVJExlxEhDIae'),
+            'HOST': os.getenv('PGHOST', 'caboose.proxy.rlwy.net'),
+            'PORT': os.getenv('PGPORT', '59507'),
+        }
+    }
+
+
 
 
 

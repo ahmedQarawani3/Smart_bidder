@@ -66,10 +66,8 @@ class ConversationsListAPIView(APIView):
         else:
             return Response({'detail': 'Unauthorized'}, status=403)
 
-        # الآن نحصر المفاوضات فقط على العروض اللي إله
         negotiations = Negotiation.objects.filter(offer__in=offers)
 
-        # استخرج آخر رسالة لكل عرض
         last_msgs = negotiations.values('offer_id').annotate(last_timestamp=Max('timestamp'))
 
         conversations = []
@@ -109,8 +107,6 @@ class ConversationsListAPIView(APIView):
 
         return Response(conversations)
 
-
-
 #تعيين الرسائل كمقروءة
 class MarkMessagesReadAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -124,8 +120,6 @@ class MarkMessagesReadAPIView(APIView):
         ).exclude(sender=user).update(is_read=True)
 
         return Response({"detail": "Messages marked as read."})
-
-
 # إرسال رسالة
 class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -197,8 +191,6 @@ class ConversationDetailAPIView(APIView):
         serializer = NegotiationSerializer(negotiations, many=True, context={'request': request})
         return Response(serializer.data)
 
-
-
 #عرض تفاصبل المشروع للمسثمر 
 class ProjectDetailView(RetrieveAPIView):
     """
@@ -216,7 +208,6 @@ class ProjectDetailView(RetrieveAPIView):
             raise PermissionDenied("فقط المستثمر يمكنه رؤية تفاصيل المشروع.")
 
         return super().get_object()
-
 
 #عرض المشاريع للمستثمر
 class ProjectFundingOnlyListView(generics.ListAPIView):
@@ -255,8 +246,6 @@ class CreateInvestmentOfferView(generics.CreateAPIView):
 
         # التحقق من إغلاق المشروع تلقائيًا بعد العرض
         auto_close_project_if_expired(project)
-
-
 
 class FilteredProjectList(APIView):
     def get(self, request):

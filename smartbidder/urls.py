@@ -22,6 +22,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),  
     path('investor/', include('investor.urls')),  
     path('projectowner/', include('projectOwner.urls')),  
+    path('adminAccounts/', include('adminAccounts.urls')),  
 
     
 ]

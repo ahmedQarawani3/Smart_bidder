@@ -13,6 +13,8 @@ class Investor(models.Model):
     profile_picture = models.ImageField(upload_to='investors/', blank=True, null=True)
     id_card_picture = models.ImageField(upload_to='investors/id_cards/', blank=True, null=True)
     commercial_register_picture= models.ImageField(upload_to='investors/commercial/', blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_investor')
+
     def clean(self):
         if not self.commercial_register and not self.id_card_picture:
             raise ValidationError("If commercial register is not provided, a personal ID card picture is required.")
