@@ -70,7 +70,6 @@ class ListAllUsersView(generics.ListAPIView):
 
         return queryset
 
-
 #تعديل بيانات اليوزرس
 class UpdateUserStatusView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAdminUser]
@@ -104,3 +103,90 @@ class UserDetailAdminView(generics.RetrieveUpdateAPIView):  # ⬅️ يدعم GE
             return Response({'detail': f"User {'activated' if user.is_active else 'deactivated'} successfully."}, status=200)
 
         return Response({'error': 'Missing is_active field'}, status=400)
+
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from django.db.models import Q
+from projectOwner.models import Project, FeasibilityStudy
+from .serializer import (
+    ProjectListSerializer,
+    ProjectDetailSerializer,
+    ProjectUpdateSerializer,
+)
+#عرض المشاريع مع امكانيه الفلتره 
+class ListProjectsView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = ProjectListSerializer
+
+    def get_queryset(self):
+        queryset = Project.objects.all().select_related('owner', 'feasibility_study')
+        status_param = self.request.query_params.get('status')
+        if status_param in ['active', 'under_negotiation', 'closed']:
+            queryset = queryset.filter(status=status_param)
+        return queryset
+
+#عرض تفاصيل مشروع مع امكانيه التعديل عالحاله تبعو
+class ProjectDetailAdminView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Project.objects.all().select_related('feasibility_study')
+    serializer_class = ProjectDetailSerializer
+
+    def patch(self, request, *args, **kwargs):
+        project = self.get_object()
+        feasibility = getattr(project, 'feasibility_study', None)
+
+        # تحديث معلومات المشروع
+        project_serializer = ProjectUpdateSerializer(project, data=request.data, partial=True)
+        project_serializer.is_valid(raise_exception=True)
+        project_serializer.save()
+
+        # تحديث دراسة الجدوى إذا تم تمريرها
+        feasibility_data = request.data.get('feasibility_study')
+        if feasibility and feasibility_data:
+            feasibility_serializer = FeasibilityStudySerializer(feasibility, data=feasibility_data, partial=True)
+            feasibility_serializer.is_valid(raise_exception=True)
+            feasibility_serializer.save()
+
+        return Response({"detail": "Project and feasibility study updated successfully."})
+
+
+#حذف مشروع 
+class DeleteProjectFileView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Project.objects.all()
+    lookup_field = 'pk'
+#-------------------------------------------
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from django.db.models import Q
+from investor.models import  InvestmentOffer, Negotiation
+from .serializer import (
+    ProjectListSerializer,
+    ProjectDetailSerializer,
+    ProjectUpdateSerializer,
+    FeasibilityStudySerializer,
+    InvestmentOfferSerializer,
+    InvestmentOfferDetailSerializer,
+    NegotiationSerializer
+)
+#عرض العروض المقدمه للصاحب المشروع
+class ListInvestmentOffersView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = InvestmentOfferSerializer
+    queryset = InvestmentOffer.objects.all().select_related('investor', 'project')
+
+#عرض التفاصيل تبع العرض مع الحذف او التعديل 
+class InvestmentOfferDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    queryset = InvestmentOffer.objects.all()
+    serializer_class = InvestmentOfferDetailSerializer
+    lookup_field = 'pk'
+
+#عرض المحادثه الخاصه بعرض معين
+class OfferNegotiationsView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = NegotiationSerializer
+
+    def get_queryset(self):
+        offer_id = self.kwargs['offer_id']
+        return Negotiation.objects.filter(offer_id=offer_id).select_related('sender')

@@ -59,3 +59,10 @@ def notify_negotiation_started(sender, instance, created, **kwargs):
         other_party = offer.project.owner.user if instance.sender == offer.investor.user else offer.investor.user
         message = f"{instance.sender.full_name} has initiated a negotiation on the investment offer for the project '{offer.project.title}'."
         Notification.objects.create(user=other_party, message=message)
+@receiver(post_save, sender=Project)
+def notify_project_status_change(sender, instance, created, **kwargs):
+    if not created:
+        previous = Project.objects.filter(pk=instance.pk).first()
+        if previous and previous.status != instance.status:
+            message = f"تم تحديث حالة مشروعك '{instance.title}' إلى: {instance.status}"
+            Notification.objects.create(user=instance.owner.user, message=message)

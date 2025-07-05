@@ -147,3 +147,91 @@ class UpdateUserStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['is_active', 'email', 'phone_number', 'full_name']
+
+
+from rest_framework import serializers
+from projectOwner.models import Project, FeasibilityStudy
+
+#-------------------------------------------------------------------------------
+
+class ProjectOwnerBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'full_name', 'email']
+
+
+class ProjectListSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'status', 'category', 'readiness_level', 'created_at', 'owner']
+
+    def get_owner(self, obj):
+        return ProjectOwnerBasicSerializer(obj.owner.user).data
+
+
+class FeasibilityStudySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeasibilityStudy
+        fields = '__all__'
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
+    owner = serializers.SerializerMethodField()
+    feasibility_study = FeasibilityStudySerializer(read_only=True)
+
+    class Meta:
+        model = Project
+        fields = '__all__'
+
+    def get_owner(self, obj):
+        return ProjectOwnerBasicSerializer(obj.owner.user).data
+
+
+class ProjectUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ['title', 'description', 'status', 'idea_summary', 'problem_solving', 'category', 'readiness_level']
+
+#----------------------------------------------------------------------
+from investor.models import InvestmentOffer,Negotiation
+class InvestmentOfferSerializer(serializers.ModelSerializer):
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    investor_name = serializers.SerializerMethodField()
+    project_owner_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvestmentOffer
+        fields = [
+            'id',  'project_title',
+             'investor_name',
+            'project_owner_name',
+            'amount', 'equity_percentage',
+            'status', 'created_at'
+        ]
+
+    def get_investor_name(self, obj):
+        return obj.investor.user.full_name if obj.investor and obj.investor.user else None
+
+    def get_project_owner_name(self, obj):
+        try:
+            return obj.project.owner.user.full_name
+        except:
+            return None
+
+
+
+
+class InvestmentOfferDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvestmentOffer
+        fields = '__all__'
+
+
+class NegotiationSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source='sender.full_name', read_only=True)
+
+    class Meta:
+        model = Negotiation
+        fields = ['id', 'sender_name', 'message', 'timestamp', 'is_read']
