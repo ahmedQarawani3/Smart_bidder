@@ -9,6 +9,8 @@ from .views import (
     DeleteNotificationView
 )
 from .views import PasswordResetRequestView
+from .views import UserContextAPIView
+
 
 urlpatterns = [
     path('register/project-owner/', ProjectOwnerRegisterView.as_view(), name='project_owner_register'),
@@ -20,4 +22,6 @@ urlpatterns = [
     path('notifications/mark-all-read/', MarkAllNotificationsAsReadView.as_view(), name='notification-mark-all-read'),
     path('notifications/<int:pk>/delete/', DeleteNotificationView.as_view(), name='notification-delete'),
     path('reset-password/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('chat-context/', UserContextAPIView.as_view(), name='user-context'),
+
 ]

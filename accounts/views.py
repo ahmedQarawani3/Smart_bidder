@@ -122,3 +122,63 @@ class PasswordResetRequestView(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from accounts.models import User
+from projectOwner.models import Project,ProjectOwner
+from investor.models import Investor, InvestmentOffer
+
+class UserContextAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        role = user.role
+        context = {
+            "username": user.username,
+            "full_name": user.full_name,
+            "language": user.language_preference,
+        }
+
+        if role == "owner":
+            try:
+                owner = ProjectOwner.objects.get(user=user)
+                projects = Project.objects.filter(owner=owner)
+                context['projects'] = [
+                    {
+                        "title": p.title,
+                        "description": p.description,
+                        "status": p.status,
+                        "category": p.category,
+                        "readiness": p.readiness_level
+                    }
+                    for p in projects
+                ]
+            except ProjectOwner.DoesNotExist:
+                context['projects'] = []
+
+        elif role == "investor":
+            try:
+                investor = Investor.objects.get(user=user)
+                offers = InvestmentOffer.objects.filter(investor=investor)
+                context['offers'] = [
+                    {
+                        "project": o.project.title,
+                        "amount": float(o.amount),
+                        "equity": float(o.equity_percentage),
+                        "status": o.status
+                    }
+                    for o in offers
+                ]
+            except Investor.DoesNotExist:
+                context['offers'] = []
+
+        elif role == "admin":
+            context["info"] = "أنت مدير، لديك صلاحيات شاملة."
+
+        return Response({
+            "user_id": user.id,
+            "role": role,
+            "context": context
+        })

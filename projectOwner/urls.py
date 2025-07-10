@@ -5,6 +5,7 @@ from .views import UpdateProjectOwnerProfileView
 from .views import ProjectOwnerDashboardView
 from .views import ProjectOwnerProjectsAPIView
 from .views import FilteredOffersView, MyProjectDetailView
+from .views import ProjectStatsAPIView
 
 from .views import MyProjectsListView, MyProjectUpdateView
 urlpatterns = [
@@ -20,6 +21,7 @@ urlpatterns = [
     path('my-projects/', ProjectOwnerProjectsAPIView.as_view(), name='my-projects'),
     path('project-owner/offers/', FilteredOffersView.as_view(), name='filtered-investment-offers'),#11
     path('my-projectss/<int:project_id>/', MyProjectDetailView.as_view(), name='my-project-detail'),
+    path('api/project-stats/', ProjectStatsAPIView.as_view(), name='project-stats'),
 
 
 

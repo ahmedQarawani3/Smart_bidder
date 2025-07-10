@@ -271,5 +271,12 @@ class MyProjectDetailView(APIView):
 
         serializer = ProjectDetailsSerializer(project)
         return Response(serializer.data)
-# views.py
+# your_app/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import analyze_project_data
 
+class ProjectStatsAPIView(APIView):
+    def get(self, request):
+        stats = analyze_project_data()
+        return Response(stats)
