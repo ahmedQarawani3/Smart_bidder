@@ -235,3 +235,62 @@ class NegotiationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Negotiation
         fields = ['id', 'sender_name', 'message', 'timestamp', 'is_read']
+# admin_project_management/serializers.py
+
+from rest_framework import serializers
+from accounts.models import Complaint
+from accounts.models import User
+
+from rest_framework import serializers
+from accounts.models import Complaint, User
+
+class UserMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'username']
+
+class ComplaintSerializer(serializers.ModelSerializer):
+    complainant = UserMiniSerializer(read_only=True)
+    defendant = UserMiniSerializer(read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = '__all__'
+
+class ComplaintDetailSerializer(serializers.ModelSerializer):
+    complainant = UserMiniSerializer(read_only=True)
+    defendant = UserMiniSerializer(read_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = '__all__'
+
+class ComplaintUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Complaint
+        fields = ['status']
+
+# ✅ يستخدمه المستخدم عند تقديم شكوى
+class SubmitComplaintSerializer(serializers.ModelSerializer):
+    defendant_full_name = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = Complaint
+        fields = ['description', 'defendant_full_name']
+
+    def validate_defendant_full_name(self, value):
+        try:
+            user = User.objects.get(full_name=value)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("لا يوجد مستخدم بهذا الاسم.")
+        return user
+
+    def create(self, validated_data):
+        defendant_user = validated_data.pop('defendant_full_name')
+        complainant_user = self.context['request'].user
+        return Complaint.objects.create(
+            complainant=complainant_user,
+            defendant=defendant_user,
+            **validated_data
+        )
+

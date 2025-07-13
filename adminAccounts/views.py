@@ -190,3 +190,55 @@ class OfferNegotiationsView(generics.ListAPIView):
     def get_queryset(self):
         offer_id = self.kwargs['offer_id']
         return Negotiation.objects.filter(offer_id=offer_id).select_related('sender')
+    
+
+from accounts.models import Complaint
+from .serializer import ComplaintSerializer,ComplaintDetailSerializer
+
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from accounts.models import Complaint
+from accounts.models import Notification
+from .serializer import (
+    ComplaintSerializer,
+    ComplaintDetailSerializer,
+    ComplaintUpdateSerializer,
+    SubmitComplaintSerializer
+)
+
+# ✅ قائمة الشكاوى للمشرف
+class ComplaintListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = ComplaintSerializer
+    queryset = Complaint.objects.all().select_related('complainant', 'defendant')
+
+# ✅ عرض وتعديل وحذف شكوى للمشرف
+class ComplaintDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Complaint.objects.all().select_related('complainant', 'defendant')
+    serializer_class = ComplaintDetailSerializer
+    lookup_field = 'pk'
+
+    def patch(self, request, *args, **kwargs):
+        complaint = self.get_object()
+        serializer = ComplaintUpdateSerializer(complaint, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # إشعار المستخدم المشتكي عند تحديث الحالة
+        status_value = serializer.validated_data.get('status')
+        if status_value:
+            Notification.objects.create(
+                user=complaint.complainant,
+                message=f"تم تحديث حالة شكواك إلى: {status_value}"
+            )
+
+        return Response({'detail': 'Complaint updated successfully.'})
+
+# ✅ تقديم شكوى من قبل مستثمر أو صاحب مشروع
+class SubmitComplaintView(generics.CreateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = SubmitComplaintSerializer
+
+    def get_serializer_context(self):
+        return {"request": self.request}

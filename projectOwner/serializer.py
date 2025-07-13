@@ -198,10 +198,6 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
 
 
 
-
-
-
-
 class ProjectOwnerDashboardSerializer(serializers.Serializer):
     active_projects_count = serializers.IntegerField()
     total_funding_required = serializers.DecimalField(max_digits=12, decimal_places=2)

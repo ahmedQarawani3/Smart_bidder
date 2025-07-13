@@ -9,6 +9,11 @@ from .views import (
     InvestmentOfferDetailView,
     OfferNegotiationsView
 )
+from .views import (
+    ComplaintListView,
+    ComplaintDetailView,
+    SubmitComplaintView,
+)
 urlpatterns = [
     path('create-investor/', AdminCreateInvestorView.as_view(), name='admin-create-investor'),
     path('create-owner/', AdminCreateProjectOwnerView.as_view(), name='admin-create-owner'),
@@ -22,5 +27,8 @@ urlpatterns = [
     path('offers/', ListInvestmentOffersView.as_view(), name='admin-list-investment-offers'),
     path('offers/<int:pk>/', InvestmentOfferDetailView.as_view(), name='admin-investment-offer-detail'),
     path('offers/<int:offer_id>/negotiations/', OfferNegotiationsView.as_view(), name='admin-offer-negotiations'),
+    path('complaints/', ComplaintListView.as_view(), name='admin-complaints'),
+    path('complaints/<int:pk>/', ComplaintDetailView.as_view(), name='admin-complaint-detail'),
+    path('submit-complaint/', SubmitComplaintView.as_view(), name='submit-complaint'),
 
 ]

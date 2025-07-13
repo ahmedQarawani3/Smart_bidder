@@ -5,9 +5,16 @@ from .views import UpdateProjectOwnerProfileView
 from .views import ProjectOwnerDashboardView
 from .views import ProjectOwnerProjectsAPIView
 from .views import FilteredOffersView, MyProjectDetailView
-from .views import ProjectStatsAPIView
+from .views import DetailedProjectAnalysisAPIView
+from .views import ROIForecastAPIView
+from .views import InvestmentDistributionAPIView
+from .views import InvestorInterestAPIView
+from .views import CapitalRecoveryHealthAPIView
+from .views import ProjectStrengthsWeaknessesAPIView
+from .views import ReadinessAlignmentAPIView
+from .views import ImprovementSuggestionsAPIView
 
-from .views import MyProjectsListView, MyProjectUpdateView
+from .views import MyProjectsListView, MyProjectUpdateView,ValueForInvestmentAPIView
 urlpatterns = [
     path('projectowner/projects/add/', CreateProjectView.as_view(), name='add-project'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -21,7 +28,15 @@ urlpatterns = [
     path('my-projects/', ProjectOwnerProjectsAPIView.as_view(), name='my-projects'),
     path('project-owner/offers/', FilteredOffersView.as_view(), name='filtered-investment-offers'),#11
     path('my-projectss/<int:project_id>/', MyProjectDetailView.as_view(), name='my-project-detail'),
-    path('api/project-stats/', ProjectStatsAPIView.as_view(), name='project-stats'),
+    path('project/<int:project_id>/detailed-analysis/', DetailedProjectAnalysisAPIView.as_view()),
+    path('project/<int:project_id>/roi-forecast/', ROIForecastAPIView.as_view(), name='roi-forecast'),
+    path('project/<int:project_id>/investment-distribution/', InvestmentDistributionAPIView.as_view()),
+    path('project/<int:project_id>/investor-interest/', InvestorInterestAPIView.as_view()),
+    path('project/<int:project_id>/capital-recovery-health/', CapitalRecoveryHealthAPIView.as_view()),
+    path('project/<int:project_id>/ValueForInvestmentAPIView/', ValueForInvestmentAPIView.as_view()),
+    path('project/<int:project_id>/strengths-weaknesses/', ProjectStrengthsWeaknessesAPIView.as_view()),
+    path('project/<int:project_id>/readiness-alignment/', ReadinessAlignmentAPIView.as_view(), name='readiness-alignment'),
+    path('project/<int:project_id>/improvement-suggestions/', ImprovementSuggestionsAPIView.as_view(), name='improvement-suggestions')
 
 
 

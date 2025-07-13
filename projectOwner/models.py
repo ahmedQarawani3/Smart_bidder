@@ -72,6 +72,10 @@ class FeasibilityStudy(models.Model):
     expected_profit_margin = models.CharField(max_length=255)  # هامش الربح المتوقع
     growth_opportunity = models.TextField()  # وصف لفرصة النمو
     created_at = models.DateTimeField(auto_now_add=True)
+    market_potential = models.FloatField(default=0)    # فرصة السوق - يتم حسابها تلقائيًا
+    risk_assessment = models.FloatField(default=0)     # تقييم المخاطر - يتم حسابه تلقائيًا
+    competitive_edge = models.FloatField(default=0)    # الميزة التنافسية - يتم حسابها تلقائيًا
+    overall_score = models.FloatField(default=0)       # التقييم العام للمشروع - يتم حسابه تلقائيًا
 
     def __str__(self):
         return f"Feasibility for Project {self.project.title}"

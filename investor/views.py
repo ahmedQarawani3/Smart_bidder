@@ -42,7 +42,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Q
 from projectOwner.serializer import ProjectSerializer
-from .models import Project, InvestmentOffer
+from .models import Project, InvestmentOffer,Investor
 from .serializer import InvestmentOfferCreateSerializer
 
 # عرض جميع المحادثات

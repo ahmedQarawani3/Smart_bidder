@@ -272,11 +272,88 @@ class MyProjectDetailView(APIView):
         serializer = ProjectDetailsSerializer(project)
         return Response(serializer.data)
 # your_app/views.py
+
+
+# views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .data_analysis import analyze_project_data
+from .data_analysis import calculate_detailed_project_analysis,calculate_roi_forecast,calculate_investment_distribution
 
-class ProjectStatsAPIView(APIView):
-    def get(self, request):
-        stats = analyze_project_data()
-        return Response(stats)
+class DetailedProjectAnalysisAPIView(APIView):
+    def get(self, request, project_id):
+        result = calculate_detailed_project_analysis(project_id)
+        return Response(result)
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import FeasibilityStudy
+ 
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class ROIForecastAPIView(APIView):
+    def get(self, request, project_id):
+        result = calculate_roi_forecast(project_id)
+        return Response(result)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class InvestmentDistributionAPIView(APIView):
+    def get(self, request, project_id):
+        result = calculate_investment_distribution(project_id)
+        return Response(result)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import calculate_investor_interest
+
+class InvestorInterestAPIView(APIView):
+    def get(self, request, project_id):
+        result = calculate_investor_interest(project_id)
+        return Response(result)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import analyze_capital_recovery,analyze_value_for_investment
+
+class CapitalRecoveryHealthAPIView(APIView):
+    def get(self, request, project_id):
+        result = analyze_capital_recovery(project_id)
+        return Response(result)
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class ValueForInvestmentAPIView(APIView):
+    def get(self, request, project_id):
+        result = analyze_value_for_investment(project_id)
+        return Response(result)
+
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import get_strengths_and_weaknesses
+
+class ProjectStrengthsWeaknessesAPIView(APIView):
+    def get(self, request, project_id):
+        result = get_strengths_and_weaknesses(project_id)
+        return Response(result)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import analyze_readiness_alignment
+
+class ReadinessAlignmentAPIView(APIView):
+    def get(self, request, project_id):
+        result = analyze_readiness_alignment(project_id)
+        return Response(result)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .data_analysis import generate_improvement_suggestions
+
+class ImprovementSuggestionsAPIView(APIView):
+    def get(self, request, project_id):
+        result = generate_improvement_suggestions(project_id)
+        return Response(result)
