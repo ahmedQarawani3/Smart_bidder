@@ -121,6 +121,7 @@ class MarkMessagesReadAPIView(APIView):
 
         return Response({"detail": "Messages marked as read."})
 # إرسال رسالة
+
 class SendMessageAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -146,9 +147,21 @@ class SendMessageAPIView(APIView):
             if offer.investor != investor:
                 return Response({'detail': 'Unauthorized'}, status=403)
 
+            # ✅ التحقق إن صاحب المشروع بدأ المحادثة
+            has_owner_message = Negotiation.objects.filter(
+                offer=offer,
+                sender=offer.project.owner.user  # تأكد أن العلاقة صحيحة
+            ).exists()
+
+            if not has_owner_message:
+                return Response({
+                    'detail': 'You cannot start the negotiation. Please wait for the project owner to initiate.'
+                }, status=403)
+
         else:
             return Response({'detail': 'Unauthorized role'}, status=403)
 
+        # ✅ إنشاء الرسالة الجديدة
         negotiation = Negotiation.objects.create(
             offer=offer,
             sender=user,
@@ -158,6 +171,7 @@ class SendMessageAPIView(APIView):
 
         serializer = NegotiationSerializer(negotiation, context={'request': request})
         return Response(serializer.data, status=201)
+
 
 
 #عرض تفاصيل محادثة معينة
@@ -242,10 +256,17 @@ class CreateInvestmentOfferView(generics.CreateAPIView):
         project_id = self.kwargs.get('project_id')
         project = get_object_or_404(Project, id=project_id)
 
+        # 🔴 التحقق إذا المستثمر قدم عرض سابق لهذا المشروع
+        existing_offer = InvestmentOffer.objects.filter(investor=user.investor, project=project).first()
+        if existing_offer:
+            raise PermissionDenied("You have already submitted an offer for this project.")
+
+        # إذا ما في عرض سابق، بيتم إنشاء عرض جديد
         offer = serializer.save(investor=user.investor, project=project)
 
         # التحقق من إغلاق المشروع تلقائيًا بعد العرض
         auto_close_project_if_expired(project)
+
 
 class FilteredProjectList(APIView):
     def get(self, request):
@@ -358,7 +379,7 @@ class UpdateInvestorProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user.investor
 
 
-
+from accounts.models import Notification
 class RejectOfferView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -372,6 +393,12 @@ class RejectOfferView(APIView):
             return Response({"detail": "You are not authorized to reject this offer."}, status=status.HTTP_403_FORBIDDEN)
 
         offer.status = 'rejected'
-        offer.save()
+        offer.rejection_reason = 'owner_rejected'  # إذا عندك الحقل في الموديل
+        offer.save(update_fields=['status', 'rejection_reason'])
+
+        # إشعار المستثمر بأن العرض رفضه صاحب المشروع
+        message = f"Your investment offer for the project '{offer.project.title}' has been rejected by the project owner."
+        Notification.objects.create(user=offer.investor.user, message=message)
 
         return Response({"detail": "Offer rejected successfully."}, status=status.HTTP_200_OK)
+

@@ -1,4 +1,3 @@
-# data_analysis.py
 
 from decimal import Decimal, InvalidOperation
 from .models import FeasibilityStudy
@@ -10,7 +9,6 @@ def calculate_detailed_project_analysis(project_id):
     except FeasibilityStudy.DoesNotExist:
         return {"error": "No feasibility study found for this project."}
 
-    # تحديد مرحلة الجاهزية
     readiness = fs.project.readiness_level
 
     # ===== 1. Market Potential =====
@@ -73,7 +71,6 @@ def calculate_detailed_project_analysis(project_id):
     )
     overall_score = max(0, min(100, overall_score))
 
-    # ===== حفظ النتائج في قاعدة البيانات =====
     fs.market_potential = round(market_potential, 2)
     fs.risk_assessment = round(risk_assessment, 2)
     fs.competitive_edge = round(competitive_edge, 2)
@@ -87,9 +84,6 @@ def calculate_detailed_project_analysis(project_id):
         "competitive_edge": fs.competitive_edge,
     }
 
-
-
-# projectOwner/analysis_tools/project_analysis.py
 
 def calculate_roi_forecast(project_id):
     try:

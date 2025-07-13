@@ -38,9 +38,11 @@ class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
     def perform_create(self, serializer):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
-        serializer.save(owner=owner)
+        serializer.save(owner=owner, status='pending')  # ✅ نجبر المشروع يبدأ كـ pending
+
 
 #عرض العروض المقدمه لصاحب المشروع
 

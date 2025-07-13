@@ -24,6 +24,7 @@ class ProjectOwner(models.Model):
 # models.py
 class Project(models.Model):
     STATUS_CHOICES = (
+        ('pending', 'Pending Approval'),  # ✅ جديد
         ('active', 'Active'),
         ('under_negotiation', 'Under Negotiation'),
         ('closed', 'Closed'),
@@ -47,7 +48,7 @@ class Project(models.Model):
     owner = models.ForeignKey(ProjectOwner, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     idea_summary = models.TextField(null=True, blank=True)         
     problem_solving = models.TextField(null=True, blank=True)      # 11111المشكلة التي يحلها
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, null=True, blank=True)#111111
@@ -72,6 +73,7 @@ class FeasibilityStudy(models.Model):
     expected_profit_margin = models.CharField(max_length=255)  # هامش الربح المتوقع
     growth_opportunity = models.TextField()  # وصف لفرصة النمو
     created_at = models.DateTimeField(auto_now_add=True)
+    
     market_potential = models.FloatField(default=0)    # فرصة السوق - يتم حسابها تلقائيًا
     risk_assessment = models.FloatField(default=0)     # تقييم المخاطر - يتم حسابه تلقائيًا
     competitive_edge = models.FloatField(default=0)    # الميزة التنافسية - يتم حسابها تلقائيًا

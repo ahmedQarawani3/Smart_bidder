@@ -48,16 +48,33 @@ from django.core.mail import send_mail
 from django.conf import settings
 from accounts.models import User
 
+# accounts/signals.py
+
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
+
+# تخزين الحالة القديمة قبل الحفظ
+@receiver(pre_save, sender=User)
+def cache_old_user_status(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_instance = User.objects.get(pk=instance.pk)
+            instance._was_active = old_instance.is_active
+        except User.DoesNotExist:
+            instance._was_active = False
+
+# إرسال الإيميل إذا تغير is_active من False إلى True
 @receiver(post_save, sender=User)
 def notify_user_account_activated(sender, instance, created, **kwargs):
-    if not created:
-        # فقط إذا صار تفعيل جديد
-        old_user = User.objects.filter(pk=instance.pk).first()
-        if old_user and not kwargs.get('raw', False):  # ignore during fixtures
-            if not old_user.is_active and instance.is_active:
-                subject = 'Account Activated'
-                message = f'Hello {instance.full_name}, your account has been activated. You can now log in to your account.'
-                from_email = settings.DEFAULT_FROM_EMAIL
-                recipient_list = [instance.email]
-                send_mail(subject, message, from_email, recipient_list)
+    if not created and not kwargs.get('raw', False):
+        if not getattr(instance, '_was_active', True) and instance.is_active:
+            subject = 'Account Activated'
+            message = f'Hello {instance.full_name}, your account has been activated. You can now log in to your account.'
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [instance.email]
+            send_mail(subject, message, from_email, recipient_list)
+
 

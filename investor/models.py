@@ -30,6 +30,11 @@ class InvestmentOffer(models.Model):
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     )
+    REJECTION_REASON_CHOICES = (
+        ('project_update', 'Project Update'),
+        ('owner_rejected', 'Owner Rejected'),
+        (None, 'No Reason'),
+    )
     investor = models.ForeignKey(Investor, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -38,6 +43,7 @@ class InvestmentOffer(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    rejection_reason = models.CharField(max_length=20, choices=REJECTION_REASON_CHOICES, null=True, blank=True)
 
 
 

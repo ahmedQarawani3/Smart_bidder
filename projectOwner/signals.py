@@ -25,16 +25,16 @@ def notify_offer_accepted(sender, instance, **kwargs):
         Notification.objects.create(user=instance.project.owner.user, message=message)
 
 # -- 3. Notification when all offers are rejected (e.g., due to project update or expiration) --
-def notify_rejected_offers(project):
-    offers = InvestmentOffer.objects.filter(project=project, status='pending')
-    if not offers.exists():
-        return
+def notify_rejected_offers_due_to_project_update(project):
+    offers = InvestmentOffer.objects.filter(project=project, status='rejected', rejection_reason__isnull=True)
     for offer in offers:
-        offer.status = 'rejected'
-        offer.save()
-        message = f"Your investment offer for the project '{project.title}' has been rejected due to a project update or automatic closure."
+        # تعيين سبب الرفض (اختياري لو ضفت الحقل في الموديل)
+        offer.rejection_reason = 'project_update'
+        offer.save(update_fields=['rejection_reason'])
+
+        message = f"Your investment offer for the project '{project.title}' has been rejected because the project data has changed."
         Notification.objects.create(user=offer.investor.user, message=message)
-    Notification.objects.create(user=project.owner.user, message=f"All investment offers for your project '{project.title}' have been rejected.")
+
 
 # -- 4. Notification when 3 days are left before the auto-close deadline --
 def notify_project_owner_before_closing():
@@ -52,6 +52,7 @@ def notify_project_owner_before_closing():
             Notification.objects.create(user=project.owner.user, message=message)
 
 # -- 5. Notification when a negotiation starts --
+# ✅ Notify the other party when a negotiation is initiated
 @receiver(post_save, sender=Negotiation)
 def notify_negotiation_started(sender, instance, created, **kwargs):
     if created:
@@ -59,10 +60,13 @@ def notify_negotiation_started(sender, instance, created, **kwargs):
         other_party = offer.project.owner.user if instance.sender == offer.investor.user else offer.investor.user
         message = f"{instance.sender.full_name} has initiated a negotiation on the investment offer for the project '{offer.project.title}'."
         Notification.objects.create(user=other_party, message=message)
+
+# ✅ Notify the project owner when the project status changes
 @receiver(post_save, sender=Project)
 def notify_project_status_change(sender, instance, created, **kwargs):
     if not created:
         previous = Project.objects.filter(pk=instance.pk).first()
         if previous and previous.status != instance.status:
-            message = f"تم تحديث حالة مشروعك '{instance.title}' إلى: {instance.status}"
+            message = f"The status of your project '{instance.title}' has been updated to: {instance.status}"
             Notification.objects.create(user=instance.owner.user, message=message)
+
