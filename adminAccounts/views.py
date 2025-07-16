@@ -242,3 +242,36 @@ class SubmitComplaintView(generics.CreateAPIView):
 
     def get_serializer_context(self):
         return {"request": self.request}
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated  # أو AllowAny حسب حاجتك
+
+from django.contrib.auth import get_user_model
+from projectOwner.models import Project
+from investor.models import InvestmentOffer
+
+User = get_user_model()
+
+class DashboardStatsAPIView(APIView):
+    permission_classes = [IsAuthenticated]  # غيرها لـ AllowAny لو بدك بدون توثيق
+
+    def get(self, request):
+        total_users = User.objects.count()
+        active_projects = Project.objects.filter(status='active').count()
+        total_investments = InvestmentOffer.objects.filter(status='accepted').count()
+
+        total_projects_approved = Project.objects.exclude(status='pending').count()
+        projects_closed = Project.objects.filter(status='closed').count()
+        success_rate = 0
+
+        if total_projects_approved > 0:
+            success_rate = round((projects_closed / total_projects_approved) * 100, 2)  # بالنسبة %
+
+        data = {
+            "total_users": total_users,
+            "active_projects": active_projects,
+            "total_investments": total_investments,
+            "success_rate_percent": success_rate
+        }
+
+        return Response(data)

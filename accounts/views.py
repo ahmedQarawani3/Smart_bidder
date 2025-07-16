@@ -182,3 +182,32 @@ class UserContextAPIView(APIView):
             "role": role,
             "context": context
         })
+    
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from .models import Review
+from .serializer import ReviewSerializer
+
+User = get_user_model()
+
+class SubmitReviewAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ReviewSerializer(data=request.data)
+        if serializer.is_valid():
+            reviewed_id = serializer.validated_data['reviewed'].id
+            if reviewed_id == request.user.id:
+                return Response({'detail': 'You cannot review yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # تحقق إذا أرسل تقييم سابق
+            if Review.objects.filter(reviewer=request.user, reviewed__id=reviewed_id).exists():
+                return Response({'detail': 'You have already submitted a review for this user.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.save(reviewer=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

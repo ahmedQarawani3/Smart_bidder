@@ -142,3 +142,28 @@ class InvestorUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+# accounts/serializers.py أو حسب مكانك
+
+from rest_framework import serializers
+from investor.models import Investor
+from projectOwner.models import ProjectOwner
+from accounts.models import User  # حسب مكان موديل المستخدم
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email', 'role']
+
+class InvestorSerializer(serializers.ModelSerializer):
+    user = UserBasicSerializer()
+
+    class Meta:
+        model = Investor
+        fields = ['id', 'user', 'rating_score', 'auto_rating_score', 'manual_rating_score']
+
+class ProjectOwnerSerializer(serializers.ModelSerializer):
+    user = UserBasicSerializer()
+
+    class Meta:
+        model = ProjectOwner
+        fields = ['id', 'user', 'rating_score', 'auto_rating_score', 'manual_rating_score']

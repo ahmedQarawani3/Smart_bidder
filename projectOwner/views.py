@@ -359,3 +359,19 @@ class ImprovementSuggestionsAPIView(APIView):
     def get(self, request, project_id):
         result = generate_improvement_suggestions(project_id)
         return Response(result)
+    
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+
+from investor.models import Investor
+from projectOwner.models import ProjectOwner
+from investor.serializer import InvestorSerializer, ProjectOwnerSerializer 
+class TopProjectOwnersAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        owners = ProjectOwner.objects.filter(rating_score__gt=0).order_by('-rating_score')[:5]
+        serializer = ProjectOwnerSerializer(owners, many=True)
+        return Response(serializer.data)

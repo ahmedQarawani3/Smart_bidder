@@ -13,6 +13,7 @@ from .views import CapitalRecoveryHealthAPIView
 from .views import ProjectStrengthsWeaknessesAPIView
 from .views import ReadinessAlignmentAPIView
 from .views import ImprovementSuggestionsAPIView
+from .views import  TopProjectOwnersAPIView
 
 from .views import MyProjectsListView, MyProjectUpdateView,ValueForInvestmentAPIView
 urlpatterns = [
@@ -36,7 +37,8 @@ urlpatterns = [
     path('project/<int:project_id>/ValueForInvestmentAPIView/', ValueForInvestmentAPIView.as_view()),
     path('project/<int:project_id>/strengths-weaknesses/', ProjectStrengthsWeaknessesAPIView.as_view()),
     path('project/<int:project_id>/readiness-alignment/', ReadinessAlignmentAPIView.as_view(), name='readiness-alignment'),
-    path('project/<int:project_id>/improvement-suggestions/', ImprovementSuggestionsAPIView.as_view(), name='improvement-suggestions')
+    path('project/<int:project_id>/improvement-suggestions/', ImprovementSuggestionsAPIView.as_view(), name='improvement-suggestions'),
+    path('top-project-owners/', TopProjectOwnersAPIView.as_view(), name='top-project-owners')
 
 
 

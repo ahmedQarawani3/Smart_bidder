@@ -14,6 +14,8 @@ from .views import (
     ComplaintDetailView,
     SubmitComplaintView,
 )
+from .views import DashboardStatsAPIView
+
 urlpatterns = [
     path('create-investor/', AdminCreateInvestorView.as_view(), name='admin-create-investor'),
     path('create-owner/', AdminCreateProjectOwnerView.as_view(), name='admin-create-owner'),
@@ -30,5 +32,6 @@ urlpatterns = [
     path('complaints/', ComplaintListView.as_view(), name='admin-complaints'),
     path('complaints/<int:pk>/', ComplaintDetailView.as_view(), name='admin-complaint-detail'),
     path('submit-complaint/', SubmitComplaintView.as_view(), name='submit-complaint'),
+    path('dashboard-stats/', DashboardStatsAPIView.as_view(), name='dashboard-stats'),
 
 ]

@@ -10,6 +10,7 @@ from .views import ConversationsListAPIView
 from .views import ConversationDetailAPIView
 from .views import InvestorOfferStatisticsAPIView
 from .views import MyOffersListAPIView,UpdateInvestorProfileView,RejectOfferView
+from .views import TopInvestorsAPIView
 
 from .views import MarkMessagesReadAPIView,SendMessageAPIView,ProjectDetailView,ProjectFundingOnlyListView,CreateInvestmentOfferView,FilteredProjectList
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path('projects/filter/', FilteredProjectList.as_view(), name='filtered-projects'),
     path('offer-statistics/', InvestorOfferStatisticsAPIView.as_view(), name='investor-offer-statistics'),
     path('my-offers/', MyOffersListAPIView.as_view(), name='my-investment-offers'),
-    path('profileInvestor/', UpdateInvestorProfileView.as_view(), name='UpdateInvestorProfileView')
+    path('profileInvestor/', UpdateInvestorProfileView.as_view(), name='UpdateInvestorProfileView'),
+    path('top-investors/', TopInvestorsAPIView.as_view(), name='top-investors')
 
 ]

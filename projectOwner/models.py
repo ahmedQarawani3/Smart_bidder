@@ -16,7 +16,9 @@ class ProjectOwner(models.Model):
     id_card_picture = models.ImageField(upload_to='owners/id_cards/', blank=True, null=True)  
     terms_agreed = models.TextField(blank=True)  
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_project_owners')
-
+    rating_score = models.FloatField(default=0)  # التقييم النهائي (مزيج التقييم اليدوي والتلقائي)
+    manual_rating_score = models.FloatField(default=0)  # التقييم اليدوي (معدل التقييمات اليدوية)
+    auto_rating_score = models.FloatField(default=0) # التقييم التلقائي
     def __str__(self):
         return f"Project Owner: {self.user.username}"
 
