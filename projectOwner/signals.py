@@ -70,3 +70,33 @@ def notify_project_status_change(sender, instance, created, **kwargs):
             message = f"The status of your project '{instance.title}' has been updated to: {instance.status}"
             Notification.objects.create(user=instance.owner.user, message=message)
 
+
+from projectOwner.models import Project, FeasibilityStudy
+def get_admin_users():
+    return User.objects.filter(role='admin', is_active=True)
+
+@receiver(post_save, sender=Project)
+def notify_admin_project_created_or_edited(sender, instance, created, **kwargs):
+    if created:
+        message = f"📌 مشروع جديد قيد الموافقة: {instance.title}"
+    else:
+        instance.status = 'pending'
+        instance.save(update_fields=['status'])
+
+        message = f"✏️ تم تعديل المشروع '{instance.title}' من قبل صاحبه ويحتاج إلى موافقة جديدة."
+
+    for admin in get_admin_users():
+        Notification.objects.create(user=admin, message=message)
+
+@receiver(post_save, sender=FeasibilityStudy)
+def notify_admin_on_feasibility_update(sender, instance, created, **kwargs):
+    project = instance.project
+    if not created:
+        project.status = 'pending'
+        project.save(update_fields=['status'])
+
+        message = f"📊 تم تعديل دراسة الجدوى الخاصة بالمشروع '{project.title}' ويحتاج إلى مراجعة."
+
+        for admin in get_admin_users():
+            Notification.objects.create(user=admin, message=message)
+

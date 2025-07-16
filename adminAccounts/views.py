@@ -183,13 +183,19 @@ class InvestmentOfferDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'pk'
 
 #عرض المحادثه الخاصه بعرض معين
+from rest_framework import generics, permissions
+from django.shortcuts import get_object_or_404
+
 class OfferNegotiationsView(generics.ListAPIView):
     permission_classes = [permissions.IsAdminUser]
     serializer_class = NegotiationSerializer
 
     def get_queryset(self):
         offer_id = self.kwargs['offer_id']
-        return Negotiation.objects.filter(offer_id=offer_id).select_related('sender')
+        # تحقق أن العرض موجود فعليًا، وإلا أظهر 404
+        get_object_or_404(InvestmentOffer, id=offer_id)
+        return Negotiation.objects.filter(offer_id=offer_id).select_related('sender', 'offer')
+
     
 
 from accounts.models import Complaint

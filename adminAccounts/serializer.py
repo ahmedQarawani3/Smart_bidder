@@ -229,12 +229,16 @@ class InvestmentOfferDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+from rest_framework import serializers
+from investor.models import Negotiation
+
 class NegotiationSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
 
     class Meta:
         model = Negotiation
         fields = ['id', 'sender_name', 'message', 'timestamp', 'is_read']
+
 # admin_project_management/serializers.py
 
 from rest_framework import serializers
