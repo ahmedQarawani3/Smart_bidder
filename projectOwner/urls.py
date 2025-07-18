@@ -40,6 +40,6 @@ urlpatterns = [
     path('project/<int:project_id>/improvement-suggestions/', ImprovementSuggestionsAPIView.as_view(), name='improvement-suggestions'),
     path('top-project-owners/', TopProjectOwnersAPIView.as_view(), name='top-project-owners')
 
-
+#http://127.0.0.1:8000/adminAccounts/project/<int:project_id>/investor-interest/ 1
 
 ]

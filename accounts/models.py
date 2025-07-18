@@ -30,8 +30,8 @@ class User(AbstractUser):
 class Review(models.Model):
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='given_reviews')
     reviewed = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_reviews')
-    rating = models.PositiveIntegerField()
-    comment = models.TextField()
+    rating = models.PositiveIntegerField(null=True, blank=True)
+    comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

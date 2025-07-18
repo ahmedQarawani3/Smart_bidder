@@ -191,23 +191,27 @@ from django.contrib.auth import get_user_model
 from .models import Review
 from .serializer import ReviewSerializer
 
-User = get_user_model()
-
-class SubmitReviewAPIView(APIView):
+class SubmitInvestorReviewAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request, offer_id):
+        try:
+            offer = InvestmentOffer.objects.get(id=offer_id)
+        except InvestmentOffer.DoesNotExist:
+            return Response({'detail': 'Offer not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user != offer.project.owner:
+            return Response({'detail': 'You are not authorized to review this offer.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # التحقق إذا سبق وتم تقييم المستثمر لهذا العرض
+        reviewed_user = offer.investor.user
+        if Review.objects.filter(reviewer=request.user, reviewed=reviewed_user).exists():
+            return Response({'detail': 'You already reviewed this investor.'}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = ReviewSerializer(data=request.data)
         if serializer.is_valid():
-            reviewed_id = serializer.validated_data['reviewed'].id
-            if reviewed_id == request.user.id:
-                return Response({'detail': 'You cannot review yourself.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            # تحقق إذا أرسل تقييم سابق
-            if Review.objects.filter(reviewer=request.user, reviewed__id=reviewed_id).exists():
-                return Response({'detail': 'You have already submitted a review for this user.'}, status=status.HTTP_400_BAD_REQUEST)
-
-            serializer.save(reviewer=request.user)
+            serializer.save(reviewer=request.user, reviewed=reviewed_user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+

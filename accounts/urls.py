@@ -10,7 +10,7 @@ from .views import (
 )
 from .views import PasswordResetRequestView
 from .views import UserContextAPIView
-from .views import SubmitReviewAPIView
+from .views import SubmitInvestorReviewAPIView
 
 
 urlpatterns = [
@@ -24,6 +24,6 @@ urlpatterns = [
     path('notifications/<int:pk>/delete/', DeleteNotificationView.as_view(), name='notification-delete'),
     path('reset-password/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('chat-context/', UserContextAPIView.as_view(), name='user-context'),
-    path('reviews/submit/', SubmitReviewAPIView.as_view(), name='submit-review'),
+    path('offers/<int:offer_id>/review/', SubmitInvestorReviewAPIView.as_view(), name='submit-review'),
 
 ]
