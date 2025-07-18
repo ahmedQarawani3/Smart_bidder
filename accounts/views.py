@@ -200,10 +200,11 @@ class SubmitInvestorReviewAPIView(APIView):
         except InvestmentOffer.DoesNotExist:
             return Response({'detail': 'Offer not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user != offer.project.owner:
+        # ✅ التحقق من أن المستخدم الحالي هو صاحب المشروع المرتبط بالعرض
+        if offer.project.owner.user != request.user:
             return Response({'detail': 'You are not authorized to review this offer.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # التحقق إذا سبق وتم تقييم المستثمر لهذا العرض
+        # ✅ التحقق إذا سبق وتم تقييم المستثمر
         reviewed_user = offer.investor.user
         if Review.objects.filter(reviewer=request.user, reviewed=reviewed_user).exists():
             return Response({'detail': 'You already reviewed this investor.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -214,4 +215,5 @@ class SubmitInvestorReviewAPIView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
