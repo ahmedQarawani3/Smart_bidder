@@ -10,6 +10,18 @@ from accounts.models import User
 from accounts.models import Notification
 
 # -- 1. Notification when a new investment offer is submitted --
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.utils import timezone
+from datetime import timedelta
+from accounts.utils import notify_user, notify_users
+from investor.models import InvestmentOffer, Negotiation
+from projectOwner.models import Project, FeasibilityStudy
+from accounts.models import Notification, User
+from accounts.models import Review
+from accounts.utils import update_user_rating
+
+# -- 1. Notification when a new investment offer is submitted --
 @receiver(post_save, sender=InvestmentOffer)
 def notify_new_investment_offer(sender, instance, created, **kwargs):
     if created and instance.status == 'pending':
@@ -20,6 +32,10 @@ def notify_new_investment_offer(sender, instance, created, **kwargs):
 # -- 2. Notification when an investment offer is accepted --
 @receiver(post_save, sender=InvestmentOffer)
 def notify_offer_accepted(sender, instance, **kwargs):
+    if hasattr(instance, '_signal_handled'):
+        return
+    instance._signal_handled = True
+
     if instance.status == 'accepted':
         message = f"The investment offer from '{instance.investor.user.full_name}' for your project '{instance.project.title}' has been accepted."
         Notification.objects.create(user=instance.project.owner.user, message=message)
@@ -28,13 +44,11 @@ def notify_offer_accepted(sender, instance, **kwargs):
 def notify_rejected_offers_due_to_project_update(project):
     offers = InvestmentOffer.objects.filter(project=project, status='rejected', rejection_reason__isnull=True)
     for offer in offers:
-        # تعيين سبب الرفض (اختياري لو ضفت الحقل في الموديل)
         offer.rejection_reason = 'project_update'
         offer.save(update_fields=['rejection_reason'])
 
         message = f"Your investment offer for the project '{project.title}' has been rejected because the project data has changed."
         Notification.objects.create(user=offer.investor.user, message=message)
-
 
 # -- 4. Notification when 3 days are left before the auto-close deadline --
 def notify_project_owner_before_closing():
@@ -52,7 +66,6 @@ def notify_project_owner_before_closing():
             Notification.objects.create(user=project.owner.user, message=message)
 
 # -- 5. Notification when a negotiation starts --
-# ✅ Notify the other party when a negotiation is initiated
 @receiver(post_save, sender=Negotiation)
 def notify_negotiation_started(sender, instance, created, **kwargs):
     if created:
@@ -61,7 +74,7 @@ def notify_negotiation_started(sender, instance, created, **kwargs):
         message = f"{instance.sender.full_name} has initiated a negotiation on the investment offer for the project '{offer.project.title}'."
         Notification.objects.create(user=other_party, message=message)
 
-# ✅ Notify the project owner when the project status changes
+# -- 6. Notify project owner when status changes --
 @receiver(post_save, sender=Project)
 def notify_project_status_change(sender, instance, created, **kwargs):
     if not created:
@@ -70,8 +83,7 @@ def notify_project_status_change(sender, instance, created, **kwargs):
             message = f"The status of your project '{instance.title}' has been updated to: {instance.status}"
             Notification.objects.create(user=instance.owner.user, message=message)
 
-
-from projectOwner.models import Project, FeasibilityStudy
+# -- 7. Admin notification when project created or edited --
 def get_admin_users():
     return User.objects.filter(role='admin', is_active=True)
 
@@ -83,11 +95,12 @@ def notify_admin_project_created_or_edited(sender, instance, created, **kwargs):
         instance.status = 'pending'
         instance.save(update_fields=['status'])
 
-        message = f"✏️ تم تعديل المشروع '{instance.title}' من قبل صاحبه ويحتاج إلى موافقة جديدة."
+        message = f"✏ تم تعديل المشروع '{instance.title}' من قبل صاحبه ويحتاج إلى موافقة جديدة."
 
     for admin in get_admin_users():
         Notification.objects.create(user=admin, message=message)
 
+# -- 8. Admin notification when feasibility study updated --
 @receiver(post_save, sender=FeasibilityStudy)
 def notify_admin_on_feasibility_update(sender, instance, created, **kwargs):
     project = instance.project
@@ -96,7 +109,36 @@ def notify_admin_on_feasibility_update(sender, instance, created, **kwargs):
         project.save(update_fields=['status'])
 
         message = f"📊 تم تعديل دراسة الجدوى الخاصة بالمشروع '{project.title}' ويحتاج إلى مراجعة."
-
         for admin in get_admin_users():
             Notification.objects.create(user=admin, message=message)
+
+# -- 9. Notify investor when offer is accepted or rejected --
+@receiver(post_save, sender=InvestmentOffer)
+def notify_offer_status_change(sender, instance, **kwargs):
+    if hasattr(instance, '_signal_handled'):
+        return
+    instance._signal_handled = True
+
+    if instance.status == 'accepted':
+        message = f"Your offer of ${instance.amount} for '{instance.project.title}' has been accepted"
+        notify_user(instance.investor.user, message)
+    elif instance.status == 'rejected':
+        message = f"Your offer for '{instance.project.title}' was not accepted. Consider revising your terms."
+        notify_user(instance.investor.user, message)
+
+# -- 10. Update investor rating on offer acceptance --
+@receiver(post_save, sender=InvestmentOffer)
+def update_investor_rating_on_offer_accept(sender, instance, **kwargs):
+    if hasattr(instance, '_signal_handled'):
+        return
+    instance._signal_handled = True
+
+    if instance.status == 'accepted':
+        update_user_rating(instance.investor.user)
+
+# -- 11. Update rating after review created --
+@receiver(post_save, sender=Review)
+def update_rating_on_review(sender, instance, created, **kwargs):
+    if created:
+        update_user_rating(instance.reviewed)
 
