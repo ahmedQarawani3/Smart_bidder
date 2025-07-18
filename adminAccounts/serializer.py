@@ -276,25 +276,26 @@ class ComplaintUpdateSerializer(serializers.ModelSerializer):
 
 # ✅ يستخدمه المستخدم عند تقديم شكوى
 class SubmitComplaintSerializer(serializers.ModelSerializer):
-    defendant_full_name = serializers.CharField(write_only=True)
+    defendant_username = serializers.CharField(write_only=True)  # ✅ نستخدم username بدلاً من full_name
 
     class Meta:
         model = Complaint
-        fields = ['description', 'defendant_full_name']
+        fields = ['description', 'defendant_username']
 
-    def validate_defendant_full_name(self, value):
+    def validate_defendant_username(self, value):
         try:
-            user = User.objects.get(full_name=value)
+            user = User.objects.get(username=value)
         except User.DoesNotExist:
             raise serializers.ValidationError("لا يوجد مستخدم بهذا الاسم.")
         return user
 
     def create(self, validated_data):
-        defendant_user = validated_data.pop('defendant_full_name')
+        defendant_user = validated_data.pop('defendant_username')  # ✅ من النوع User
         complainant_user = self.context['request'].user
         return Complaint.objects.create(
             complainant=complainant_user,
             defendant=defendant_user,
             **validated_data
         )
+
 
