@@ -234,10 +234,24 @@ from investor.models import Negotiation
 
 class NegotiationSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
+    sender_role = serializers.SerializerMethodField()  # ✅
 
     class Meta:
         model = Negotiation
-        fields = ['id', 'sender_name', 'message', 'timestamp', 'is_read']
+        fields = ['id', 'sender_name', 'sender_role', 'message', 'timestamp', 'is_read']
+
+    def get_sender_role(self, obj):
+        user = obj.sender
+        if Investor.objects.filter(user=user).exists():
+            return 'investor'
+        elif ProjectOwner.objects.filter(user=user).exists():
+            return 'owner'
+        else:
+            return 'unknown'
+
+
+
+
 
 # admin_project_management/serializers.py
 

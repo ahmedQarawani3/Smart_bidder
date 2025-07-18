@@ -11,6 +11,7 @@ from .views import (
 from .views import PasswordResetRequestView
 from .views import UserContextAPIView
 from .views import SubmitInvestorReviewAPIView
+from .views import ImportantAdminNotificationsView
 
 
 urlpatterns = [
@@ -25,5 +26,6 @@ urlpatterns = [
     path('reset-password/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('chat-context/', UserContextAPIView.as_view(), name='user-context'),
     path('offers/<int:offer_id>/review/', SubmitInvestorReviewAPIView.as_view(), name='submit-review'),
+    path('notifications/admin-important/', ImportantAdminNotificationsView.as_view(), name='admin-important-notifications'),
 
 ]

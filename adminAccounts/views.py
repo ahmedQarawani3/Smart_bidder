@@ -192,12 +192,14 @@ class OfferNegotiationsView(generics.ListAPIView):
 
     def get_queryset(self):
         offer_id = self.kwargs['offer_id']
-
-        # تحقق أن العرض موجود فعلاً
         offer = get_object_or_404(InvestmentOffer, id=offer_id)
+        return Negotiation.objects.filter(offer=offer).select_related(
+            'sender',
+            'offer__investor__user',
+            'offer__project__owner__user'
+        )
 
-        # جلب المحادثات فقط المرتبطة بهذا العرض دون غيره
-        return Negotiation.objects.filter(offer=offer).select_related('sender', 'offer')
+
 
 
 

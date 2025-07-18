@@ -53,7 +53,7 @@ from django.db import models
 from django.conf import settings
 
 class Negotiation(models.Model):
-    offer = models.ForeignKey(InvestmentOffer, on_delete=models.CASCADE, related_name="negotiations")
+    offer = models.ForeignKey(InvestmentOffer, on_delete=models.CASCADE, related_name="messages")
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)

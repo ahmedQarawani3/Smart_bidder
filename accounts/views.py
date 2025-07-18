@@ -217,3 +217,39 @@ class SubmitInvestorReviewAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+from functools import reduce
+from django.db import models
+
+from rest_framework import generics, permissions
+from accounts.models import Notification
+from accounts.serializer import NotificationSerializer
+
+from functools import reduce
+from django.db.models import Q
+from rest_framework import generics, permissions
+from accounts.models import Notification
+
+class ImportantAdminNotificationsView(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role != 'admin':
+            return Notification.objects.none()
+        
+        keywords = [
+            "Project created",
+            "Project updated",
+            "new account created",
+            "score reached",
+            
+        ]
+        
+        query = reduce(lambda q1, q2: q1 | q2,
+                       [Q(message__icontains=kw) for kw in keywords])
+        
+        qs = Notification.objects.filter(user=user).filter(query).order_by('-created_at')
+        return qs
+
