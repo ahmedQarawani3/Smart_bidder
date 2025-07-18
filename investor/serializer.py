@@ -157,10 +157,12 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
 class InvestorSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
+    profile_picture = serializers.ImageField()  # ✅ إضافة هذا السطر
 
     class Meta:
         model = Investor
-        fields = ['id', 'user', 'rating_score']  # ✅ فقط التقييم النهائي
+        fields = ['id', 'user', 'profile_picture', 'rating_score']
+
 
 
 class ProjectOwnerSerializer(serializers.ModelSerializer):
