@@ -368,10 +368,14 @@ from rest_framework.permissions import AllowAny
 from investor.models import Investor
 from projectOwner.models import ProjectOwner
 from investor.serializer import InvestorSerializer, ProjectOwnerSerializer 
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 class TopProjectOwnersAPIView(APIView):
     permission_classes = [AllowAny]
-    
+
     def get(self, request):
         owners = ProjectOwner.objects.filter(rating_score__gt=0).order_by('-rating_score')[:5]
-        serializer = ProjectOwnerSerializer(owners, many=True)
+        serializer = ProjectOwnerSerializer(owners, many=True, context={'request': request})
         return Response(serializer.data)

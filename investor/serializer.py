@@ -167,7 +167,17 @@ class InvestorSerializer(serializers.ModelSerializer):
 
 class ProjectOwnerSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
+    profile_picture_url = serializers.SerializerMethodField()
+    final_rating = serializers.FloatField(source='rating_score', read_only=True)
 
     class Meta:
         model = ProjectOwner
-        fields = ['id', 'user', 'rating_score', 'auto_rating_score', 'manual_rating_score']
+        fields = ['id', 'user', 'final_rating', 'profile_picture_url']
+
+    def get_profile_picture_url(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
+            # صيغة رابط كامل للصورة
+            return request.build_absolute_uri(obj.profile_picture.url) if request else obj.profile_picture.url
+        return None
+
