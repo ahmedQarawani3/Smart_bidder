@@ -370,7 +370,7 @@ from projectOwner.models import ProjectOwner
 from investor.serializer import InvestorSerializer, ProjectOwnerSerializer 
 class TopProjectOwnersAPIView(APIView):
     permission_classes = [AllowAny]
-
+    
     def get(self, request):
         owners = ProjectOwner.objects.filter(rating_score__gt=0).order_by('-rating_score')[:5]
         serializer = ProjectOwnerSerializer(owners, many=True)

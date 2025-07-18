@@ -152,14 +152,16 @@ from accounts.models import User  # حسب مكان موديل المستخدم
 class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'role']
+        fields = ['id', 'full_name', 'role']  # ❌ بدون الإيميل
+
 
 class InvestorSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
 
     class Meta:
         model = Investor
-        fields = ['id', 'user', 'rating_score', 'auto_rating_score', 'manual_rating_score']
+        fields = ['id', 'user', 'rating_score']  # ✅ فقط التقييم النهائي
+
 
 class ProjectOwnerSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
