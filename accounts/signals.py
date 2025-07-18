@@ -7,7 +7,30 @@ from projectOwner.models import Project
 from investor.models import Negotiation
 from accounts.utils import notify_user, notify_users
 from .models import Notification  
+# accounts/signals.py
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .models import Review
+from projectOwner.models import Project
+from investor.models import InvestmentOffer
+from .utils import update_user_rating
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from accounts.models import User
 # ✅ إشعار تلقائي عند إنشاء مشروع جديد
 @receiver(post_save, sender=Project)
 def notify_new_project(sender, instance, created, **kwargs):
@@ -36,25 +59,8 @@ def notify_negotiation_started(sender, instance, created, **kwargs):
         message = f"{instance.sender.full_name} wants to negotiate terms for your investment offer"
         notify_user(other_party, message)
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
-from django.conf import settings
-from accounts.models import User
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
-from django.conf import settings
-from accounts.models import User
 
-# accounts/signals.py
-
-from django.db.models.signals import pre_save, post_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
-from django.conf import settings
-from accounts.models import User
 
 # تخزين الحالة القديمة قبل الحفظ
 @receiver(pre_save, sender=User)
@@ -78,12 +84,6 @@ def notify_user_account_activated(sender, instance, created, **kwargs):
             send_mail(subject, message, from_email, recipient_list)
 
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from .models import Review
-from projectOwner.models import Project
-from investor.models import InvestmentOffer
-from .utils import update_user_rating
 
 @receiver(post_save, sender=Project)
 def update_owner_rating_on_project_status_change(sender, instance, **kwargs):
