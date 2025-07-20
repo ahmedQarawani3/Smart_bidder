@@ -319,7 +319,7 @@ class InvestorInterestAPIView(APIView):
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .data_analysis import analyze_capital_recovery,analyze_value_for_investment
+from .data_analysis import analyze_capital_recovery
 
 class CapitalRecoveryHealthAPIView(APIView):
     def get(self, request, project_id):
@@ -329,10 +329,7 @@ class CapitalRecoveryHealthAPIView(APIView):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-class ValueForInvestmentAPIView(APIView):
-    def get(self, request, project_id):
-        result = analyze_value_for_investment(project_id)
-        return Response(result)
+
 
 # views.py
 from rest_framework.views import APIView
@@ -353,12 +350,21 @@ class ReadinessAlignmentAPIView(APIView):
         return Response(result)
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .data_analysis import generate_improvement_suggestions
+from django.http import JsonResponse
+from django.views import View
+from .models import FeasibilityStudy
+from .data_analysis import cost_to_revenue_analysis  # افترضنا الدالة موجودة في هذا الملف
 
-class ImprovementSuggestionsAPIView(APIView):
+class CostToRevenueAnalysisView(View):
     def get(self, request, project_id):
-        result = generate_improvement_suggestions(project_id)
-        return Response(result)
+        try:
+            fs = FeasibilityStudy.objects.get(project_id=project_id)
+        except FeasibilityStudy.DoesNotExist:
+            return JsonResponse({"error": "No feasibility study found for this project."}, status=404)
+        
+        result = cost_to_revenue_analysis(fs)
+        return JsonResponse(result)
+
     
 
 from rest_framework.views import APIView

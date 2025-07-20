@@ -144,23 +144,24 @@ def calculate_investment_distribution(project_id):
     total = team + marketing
     if total == 0:
         return {
-            "investment_distribution": "⚠️ لا يوجد توزيع استثماري محدد للفريق أو التسويق."
+            "investment_distribution": "⚠️ No investment distribution specified for team or marketing."
         }
 
     diff = abs(team - marketing)
 
     if diff <= 10:
-        recommendation = "✅ توزيع الاستثمار بين الفريق والتسويق متوازن، هذا أمر جيد."
+        recommendation = "✅ The investment between the team and marketing is balanced. This is a good sign."
     elif team > marketing:
-        recommendation = "👥 الاستثمار أكبر في الفريق. فكر في تعزيز استثمار التسويق لزيادة الوصول إلى السوق."
+        recommendation = "👥 More investment is directed toward the team. Consider boosting marketing investment to increase market reach."
     else:
-        recommendation = "📢 الاستثمار أكبر في التسويق. تأكد من أن الفريق لديه القدرة على تلبية النمو المتوقع."
+        recommendation = "📢 More investment is directed toward marketing. Ensure the team can handle the expected growth."
 
     return {
         "team_percentage": team,
         "marketing_percentage": marketing,
         "investment_distribution": recommendation
     }
+
 from investor.models import InvestmentOffer, Negotiation
 from collections import Counter
 
@@ -173,17 +174,17 @@ def calculate_investor_interest(project_id):
     accepted_offers = offers.filter(status='accepted').count()
     rejected_offers = offers.filter(status='rejected').count()
 
-    # عدد المستثمرين الفريدين المهتمين
+    # Count of unique investors interested
     unique_investors = offers.values_list('investor_id', flat=True).distinct().count()
 
     if total_offers == 0:
-        interest_level = "❌ لا يوجد عروض استثمارية بعد. حاول تعزيز وضوح المشروع وتسويقه للمستثمرين."
+        interest_level = "❌ No investment offers yet. Try improving the project's visibility and marketing to investors."
     elif total_offers >= 5 and total_negotiations >= 5:
-        interest_level = "🔥 اهتمام مرتفع من المستثمرين، العروض والمفاوضات في تزايد."
+        interest_level = "🔥 High investor interest. Offers and negotiations are increasing."
     elif total_offers >= 2:
-        interest_level = "📈 هنالك اهتمام جيد من بعض المستثمرين."
+        interest_level = "📈 Good interest from some investors."
     else:
-        interest_level = "🔍 الاهتمام لا يزال منخفضًا. حاول تحسين العرض التقديمي للمشروع."
+        interest_level = "🔍 Investor interest is still low. Consider enhancing the project’s pitch."
 
     return {
         "total_offers": total_offers,
@@ -200,93 +201,70 @@ from .models import FeasibilityStudy
 import re
 from .models import FeasibilityStudy
 
+import re
+
+import re
+
 def analyze_capital_recovery(project_id):
     try:
         fs = FeasibilityStudy.objects.get(project_id=project_id)
     except FeasibilityStudy.DoesNotExist:
         return {"error": "No feasibility study found for this project."}
 
-    # استخراج رقم تقريبي من expected_monthly_revenue
+    # Extract expected monthly revenue from text (e.g., "9,000 - 12,000 USD")
     try:
         revenue_str = fs.expected_monthly_revenue
         if not revenue_str:
-            raise ValueError("No revenue string provided")
+            raise ValueError("Monthly revenue not available")
 
-        # إذا كان مثل: "9,000 - 12,000 USD"
+        # Extract numbers
         matches = re.findall(r"[\d,]+", revenue_str)
         numbers = [float(val.replace(',', '')) for val in matches]
 
-        if len(numbers) == 0:
+        if not numbers:
             revenue = 0
         elif len(numbers) == 1:
             revenue = numbers[0]
         else:
-            revenue = sum(numbers) / len(numbers)  # متوسط بين الحد الأدنى والأعلى
+            revenue = sum(numbers) / len(numbers)  # Average of the two bounds
 
     except Exception:
         revenue = 0
 
-    roi_months = fs.roi_period_months
-    funding = float(fs.funding_required)
+    try:
+        funding = float(fs.funding_required)
+    except:
+        funding = 0
 
-    if revenue == 0:
-        message = "⚠️ لا يمكن تقييم استرداد رأس المال بسبب عدم توفر الإيرادات المتوقعة."
-    elif roi_months <= 6:
-        message = "✅ المشروع يُتوقع أن يسترد رأس المال بسرعة خلال 6 أشهر – ممتاز!"
-    elif 6 < roi_months <= 12:
-        message = "🟡 استرداد رأس المال خلال سنة – مقبول ولكن يفضل تحسين الأرباح أو تقليل التكاليف."
-    elif 12 < roi_months <= 24:
-        message = "⚠️ فترة الاسترداد أطول من سنة – راجع خطة العمل وقيّم الجدوى."
+    # Calculate actual ROI period
+    if revenue > 0:
+        roi_months = round(funding / revenue, 2)
     else:
-        message = "❌ استرداد رأس المال يتطلب أكثر من سنتين – المشروع عالي المخاطرة حاليًا."
+        roi_months = None
+
+    # Generate message based on calculated period
+    if revenue == 0 or funding == 0:
+        message = "⚠️ Unable to evaluate capital recovery due to missing data."
+    elif roi_months <= 6:
+        message = "✅ The project is expected to recover capital quickly within 6 months – Excellent!"
+    elif 6 < roi_months <= 12:
+        message = "🟡 Capital recovery within a year – Acceptable, but consider improving revenue or reducing costs."
+    elif 12 < roi_months <= 24:
+        message = "⚠️ Recovery period is longer than a year – Re-evaluate the business plan and feasibility."
+    else:
+        message = "❌ Capital recovery takes more than two years – The project is currently high risk."
 
     return {
-        "roi_period_months": roi_months,
         "expected_monthly_revenue": revenue,
         "funding_required": funding,
+        "calculated_roi_months": roi_months,
         "capital_recovery_health": message
     }
+
+
 # services/value_analysis.py
-import re
-from .models import FeasibilityStudy
 
-# value_for_investment_analysis.py
-from .models import FeasibilityStudy
 
-def analyze_value_for_investment(project_id):
-    try:
-        fs = FeasibilityStudy.objects.get(project_id=project_id)
-    except FeasibilityStudy.DoesNotExist:
-        return {"value_for_investment": "❌ لا يوجد دراسة جدوى لهذا المشروع."}
-
-    try:
-        # تحويل الإيراد المتوقع وهامش الربح إلى أرقام
-        expected_revenue = float(fs.expected_monthly_revenue.replace(",", "").split()[0])
-        profit_margin = float(fs.expected_profit_margin.replace("%", "").strip())
-        funding_required = float(fs.funding_required)
-    except:
-        return {"value_for_investment": "⚠️ لا يمكن حساب العائد بسبب مشاكل في البيانات المدخلة."}
-
-    if expected_revenue <= 0 or profit_margin <= 0 or funding_required <= 0:
-        return {"value_for_investment": "⚠️ البيانات غير كافية لحساب القيمة مقابل الاستثمار."}
-
-    # ✅ حساب الربح السنوي الصافي
-    net_annual_profit = expected_revenue * 12 * (profit_margin / 100)
-
-    # ✅ حساب ROI السنوي
-    roi_score = (net_annual_profit / funding_required) * 100
-
-    # ✅ تقييم
-    if roi_score > 100:
-        message = f"✅ المشروع يقدم قيمة عالية مقابل الاستثمار – ROI = {roi_score:.2f}٪."
-    elif roi_score > 50:
-        message = f"📈 المشروع يقدم قيمة جيدة – ROI = {roi_score:.2f}٪."
-    elif roi_score > 20:
-        message = f"⚠️ المشروع متوسط القيمة – ROI = {roi_score:.2f}٪. ينصح بمراجعة التكاليف أو تحسين الربحية."
-    else:
-        message = f"❌ المشروع لا يقدم قيمة جيدة حاليًا مقابل التمويل – ROI = {roi_score:.2f}٪."
-
-    return {"value_for_investment": message}
 
 # your_app/data_analysis.py
 from .models import FeasibilityStudy
@@ -388,15 +366,15 @@ def analyze_readiness_alignment(project_id):
         project = Project.objects.get(id=project_id)
         fs = project.feasibility_study
     except Project.DoesNotExist:
-        return {"error": "المشروع غير موجود."}
+        return {"error": "Project not found."}
     except FeasibilityStudy.DoesNotExist:
-        return {"error": "لا يوجد دراسة جدوى لهذا المشروع."}
+        return {"error": "No feasibility study available for this project."}
 
     readiness = project.readiness_level
     expected_revenue = 0
+
     try:
         if fs.expected_monthly_revenue:
-            # نفس دالة التحويل للنصوص بنطاق الإيرادات لو موجودة
             def parse_expected_revenue(revenue_str):
                 if not revenue_str:
                     return 0
@@ -418,30 +396,40 @@ def analyze_readiness_alignment(project_id):
     score = 0
 
     if readiness == "idea":
-        analysis = "🚧 المشروع في مرحلة الفكرة، يحتاج إلى تطوير واضح ونموذج تجريبي قبل دخول السوق."
+        analysis = "🚧 The project is at the idea stage. It needs clear development and a prototype before market entry."
         score = 30
         if expected_revenue > 5000:
-            analysis += " رغم ذلك، هناك توقعات جيدة للإيرادات يجب استغلالها مع بناء خطة واضحة."
+            analysis += " However, there are promising revenue expectations that should be leveraged with a clear plan."
             score += 10
 
     elif readiness == "prototype":
-        analysis = "🧪 المشروع في مرحلة النموذج الأولي، مناسب لاختبار السوق والتعديل بناءً على ردود الفعل."
+        analysis = "🧪 The project is at the prototype stage. It's suitable for market testing and iteration based on feedback."
         score = 60
         if expected_revenue > 8000:
-            analysis += " توقعات الإيرادات قوية وهذا مؤشر جيد لنجاح المشروع."
+            analysis += " Strong revenue expectations indicate good potential for success."
             score += 15
 
     elif readiness == "existing":
-        analysis = "✅ المشروع قائم وجاهز للسوق، يجب التركيز على تسريع النمو والتوسع."
+        analysis = "✅ The project is already operational and market-ready. Focus should be on scaling and growth."
         score = 90
+
+        funding = float(fs.funding_required or 0)
+        team_marketing_investment = fs.team_investment_percentage + fs.marketing_investment_percentage
+
         if expected_revenue < 3000:
-            analysis += " بالرغم من جاهزية المشروع، الإيرادات المتوقعة منخفضة وينبغي تحسين الاستراتيجية التسويقية."
-            score -= 20
+            if funding > 10000 and team_marketing_investment < 40:
+                analysis += " Revenue is low compared to funding and investment size. Consider reviewing the growth and marketing strategy."
+                score -= 25
+            elif funding <= 10000 or team_marketing_investment >= 40:
+                analysis += " Revenue is low, but investment in team and marketing is good. Performance can be improved without major concern."
+                score -= 10
+        elif expected_revenue >= 3000:
+            analysis += " Revenue is reasonable for the size of the project."
+
     else:
-        analysis = "❓ مستوى جاهزية المشروع غير محدد بشكل صحيح."
+        analysis = "❓ Project readiness level is not clearly defined."
         score = 0
 
-    # ضبط score بين 0 و 100
     score = max(0, min(100, score))
 
     return {
@@ -449,62 +437,116 @@ def analyze_readiness_alignment(project_id):
         "readiness_score": score,
         "analysis": analysis
     }
+
+
 from .models import FeasibilityStudy, Project
 
-def generate_improvement_suggestions(project_id):
-    try:
-        fs = FeasibilityStudy.objects.get(project_id=project_id)
-        project = fs.project
-    except FeasibilityStudy.DoesNotExist:
-        return {"error": "لا يوجد دراسة جدوى لهذا المشروع."}
-    except Project.DoesNotExist:
-        return {"error": "المشروع غير موجود."}
+def cost_to_revenue_analysis(feasibility_study):
+    """
+    Comprehensive analysis of funding versus revenue, considering various factors.
+    If the project is still at the idea or prototype stage, financial analysis is skipped.
+    """
 
-    suggestions = []
-
-    # تحسين الإيرادات المتوقعة
-    try:
-        expected_revenue = 0
-        if fs.expected_monthly_revenue:
-            clean_str = fs.expected_monthly_revenue.replace("USD", "").replace(",", "").strip()
+    def parse_expected_revenue(revenue_str):
+        if not revenue_str:
+            return 0.0
+        try:
+            clean_str = revenue_str.replace("USD", "").replace(",", "").strip()
             if "-" in clean_str:
                 parts = clean_str.split("-")
-                nums = [float(p.strip()) for p in parts]
-                expected_revenue = sum(nums) / len(nums)
+                nums = [float(p.strip()) for p in parts if p.strip().replace('.', '', 1).isdigit()]
+                return sum(nums) / len(nums) if nums else 0.0
             else:
-                expected_revenue = float(clean_str)
-        if expected_revenue < 5000:
-            suggestions.append("ضع خطة تسويقية أفضل لزيادة الإيرادات الشهرية المتوقعة.")
-    except:
-        suggestions.append("تحديث بيانات الإيرادات الشهرية المتوقعة لتحسين التحليل.")
+                return float(clean_str)
+        except Exception:
+            return 0.0
 
-    # هامش الربح
-    try:
-        profit_margin = float(fs.expected_profit_margin.replace("%", "").strip())
-        if profit_margin < 15:
-            suggestions.append("راجع هيكل التكاليف لزيادة هامش الربح المتوقع.")
-    except:
-        suggestions.append("تحديث بيانات هامش الربح المتوقع ضروري لتحليل أفضل.")
+    def parse_profit_margin(profit_margin_str):
+        if not profit_margin_str:
+            return 0.0
+        try:
+            return float(profit_margin_str.replace("%", "").strip()) / 100
+        except Exception:
+            return 0.0
 
-    # فترة استرداد رأس المال
-    if fs.roi_period_months > 18:
-        suggestions.append("حاول تحسين نموذج العمل لتقليل فترة استرداد رأس المال.")
+    # Extract readiness level
+    readiness = getattr(feasibility_study.project, "readiness_level", None)
 
-    # استثمار الفريق والتسويق
-    total_investment = fs.team_investment_percentage + fs.marketing_investment_percentage
-    if total_investment < 50:
-        suggestions.append("قم بزيادة الاستثمار في الفريق والتسويق لتعزيز فرص النجاح.")
+    # ✅ Skip financial analysis if the project is in the "idea" or "prototype" stage
+    if readiness in ['idea', 'prototype']:
+        return {
+            "funding_required": float(feasibility_study.funding_required or 0),
+            "expected_annual_profit": 0,
+            "roi_period_months": feasibility_study.roi_period_months or 0,
+            "capital_recovery_speed_years": None,
+            "is_profitable": False,
+            "analysis_messages": [
+                "🚧 Project is still in the idea or prototype stage. Financial analysis is not applicable at this point."
+            ],
+            "recommendations": [
+                "Start developing a simple MVP to test core functionality.",
+                "Test market demand through low-cost methods.",
+                "Build a basic financial plan before seeking large funding.",
+                "Focus on validating core assumptions before scaling."
+            ]
+        }
 
-    # فرصة النمو
-    if not fs.growth_opportunity or len(fs.growth_opportunity.strip()) < 30:
-        suggestions.append("وضح فرص النمو المحتملة بشكل أفضل لجذب المستثمرين.")
+    # Proceed with financial analysis
+    funding_required = float(feasibility_study.funding_required or 0)
+    expected_monthly_revenue = parse_expected_revenue(feasibility_study.expected_monthly_revenue)
+    profit_margin = parse_profit_margin(feasibility_study.expected_profit_margin)
+    roi_period = feasibility_study.roi_period_months or 0
+    roi_period_years = roi_period / 12 if roi_period > 0 else float('inf')
+    marketing_pct = feasibility_study.marketing_investment_percentage or 0
+    team_pct = feasibility_study.team_investment_percentage or 0
+    market_potential = feasibility_study.market_potential or 0
+    risk_assessment = feasibility_study.risk_assessment or 0
+    competitive_edge = feasibility_study.competitive_edge or 0
 
-    # حالة المشروع
-    if project.status == 'under_negotiation':
-        suggestions.append("ركز على تحسين العروض والتفاوض لزيادة فرص التمويل.")
-    elif project.status == 'closed':
-        suggestions.append("راجع أسباب إغلاق المشروع لتجنبها في المستقبل.")
+    # Calculate expected annual profit
+    expected_annual_profit = expected_monthly_revenue * 12 * profit_margin
+
+    # Calculate capital recovery period
+    capital_recovery_speed = (funding_required / expected_annual_profit) if expected_annual_profit > 0 else float('inf')
+    is_profitable = expected_annual_profit >= funding_required
+
+    analysis_messages = []
+    recommendations = []
+
+    if is_profitable:
+        analysis_messages.append("✅ Expected annual profit exceeds required funding.")
+    else:
+        analysis_messages.append("❌ Required funding is higher than the expected annual profit.")
+
+    if capital_recovery_speed <= roi_period_years and capital_recovery_speed != float('inf'):
+        analysis_messages.append(
+            f"⏳ ROI period ({roi_period} months) aligns with recovery speed ({capital_recovery_speed:.2f} years)."
+        )
+    else:
+        analysis_messages.append(
+            f"⚠️ ROI period ({roi_period} months) is longer than expected based on current profitability ({capital_recovery_speed:.2f} years)."
+        )
+        recommendations.append("Review business model to reduce capital recovery time.")
+
+    if (marketing_pct + team_pct) < 50:
+        recommendations.append("Consider increasing investment in the team and marketing to improve success potential.")
+
+    if market_potential < 0.5:
+        recommendations.append("Market potential is limited. Consider expanding your target market.")
+    if risk_assessment > 0.7:
+        recommendations.append("Risk level is high. Develop a risk mitigation plan.")
+    if competitive_edge < 0.4:
+        recommendations.append("Weak competitive edge. Focus on enhancing unique value propositions.")
+
+    if not is_profitable:
+        recommendations.append("Consider revisiting pricing, increasing revenue, or reducing costs to improve profitability.")
 
     return {
-        "improvement_suggestions": suggestions if suggestions else ["لا توجد اقتراحات لتحسين المشروع حالياً."]
+        "funding_required": funding_required,
+        "expected_annual_profit": expected_annual_profit,
+        "roi_period_months": roi_period,
+        "capital_recovery_speed_years": capital_recovery_speed,
+        "is_profitable": is_profitable,
+        "analysis_messages": analysis_messages,
+        "recommendations": recommendations,
     }

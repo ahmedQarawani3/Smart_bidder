@@ -12,10 +12,9 @@ from .views import InvestorInterestAPIView
 from .views import CapitalRecoveryHealthAPIView
 from .views import ProjectStrengthsWeaknessesAPIView
 from .views import ReadinessAlignmentAPIView
-from .views import ImprovementSuggestionsAPIView
-from .views import  TopProjectOwnersAPIView
+from .views import  TopProjectOwnersAPIView,CostToRevenueAnalysisView
 
-from .views import MyProjectsListView, MyProjectUpdateView,ValueForInvestmentAPIView
+from .views import MyProjectsListView, MyProjectUpdateView
 urlpatterns = [
     path('projectowner/projects/add/', CreateProjectView.as_view(), name='add-project'),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -34,12 +33,11 @@ urlpatterns = [
     path('project/<int:project_id>/investment-distribution/', InvestmentDistributionAPIView.as_view()),
     path('project/<int:project_id>/investor-interest/', InvestorInterestAPIView.as_view()),
     path('project/<int:project_id>/capital-recovery-health/', CapitalRecoveryHealthAPIView.as_view()),
-    path('project/<int:project_id>/ValueForInvestmentAPIView/', ValueForInvestmentAPIView.as_view()),
     path('project/<int:project_id>/strengths-weaknesses/', ProjectStrengthsWeaknessesAPIView.as_view()),
     path('project/<int:project_id>/readiness-alignment/', ReadinessAlignmentAPIView.as_view(), name='readiness-alignment'),
-    path('project/<int:project_id>/improvement-suggestions/', ImprovementSuggestionsAPIView.as_view(), name='improvement-suggestions'),
-    path('top-project-owners/', TopProjectOwnersAPIView.as_view(), name='top-project-owners')
+    path('top-project-owners/', TopProjectOwnersAPIView.as_view(), name='top-project-owners'),
+    path('project/<int:project_id>/cost-to-revenue-analysis/', CostToRevenueAnalysisView.as_view(), name='cost-to-revenue-analysis')
 
-#http://127.0.0.1:8000/adminAccounts/project/<int:project_id>/investor-interest/ 1
+#http://127.0.0.1:8000/projectowner/project/<int:project_id>/cost-to-revenue-analysis/ 1
 
 ]
