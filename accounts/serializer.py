@@ -179,13 +179,38 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 
 
+from projectOwner.models import FeasibilityStudy,Project
 
 from rest_framework import serializers
 from .models import Review
-
+class FeasibilityStudySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeasibilityStudy
+        fields = [
+            'id',
+            "current_revenue",
+            "funding_required",
+            "marketing_investment_percentage",
+            "team_investment_percentage",
+            "expected_monthly_revenue",
+            "roi_period_months",
+            "expected_profit_margin",
+            "growth_opportunity",
+        ]
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'reviewer', 'reviewed', 'rating', 'comment', 'created_at']
         read_only_fields = ['id', 'reviewer', 'reviewed', 'created_at']
+
+class ProjectEvaluationSerializer(serializers.ModelSerializer):
+    feasibility_study = FeasibilityStudySerializer()
+
+    class Meta:
+        model = Project
+        fields = [
+            'title', 'description', 'idea_summary',
+            'problem_solving', 'category', 'readiness_level',
+            'feasibility_study'
+        ]
 

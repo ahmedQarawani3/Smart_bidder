@@ -40,7 +40,6 @@ class Project(models.Model):
         ('other', 'Other'),
     )
 
-
     READINESS_CHOICES = (
         ('idea', 'Idea'),
         ('prototype', 'Prototype'),
@@ -57,6 +56,7 @@ class Project(models.Model):
     readiness_level = models.CharField(max_length=50, choices=READINESS_CHOICES, null=True, blank=True)#11111
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"Project Owner: {self.title}"
 

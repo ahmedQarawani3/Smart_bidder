@@ -11,7 +11,7 @@ from .views import (
 from .views import PasswordResetRequestView
 from .views import UserContextAPIView
 from .views import SubmitInvestorReviewAPIView
-from .views import ImportantAdminNotificationsView
+from .views import ImportantAdminNotificationsView,EvaluateProjectAIView
 
 
 urlpatterns = [
@@ -27,5 +27,5 @@ urlpatterns = [
     path('chat-context/', UserContextAPIView.as_view(), name='user-context'),
     path('offers/<int:offer_id>/review/', SubmitInvestorReviewAPIView.as_view(), name='submit-review'),
     path('notifications/admin-important/', ImportantAdminNotificationsView.as_view(), name='admin-important-notifications'),
-
+    path("evaluate-project/<int:pk>/", EvaluateProjectAIView.as_view(), name="evaluate-project")
 ]

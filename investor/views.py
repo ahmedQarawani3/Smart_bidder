@@ -85,8 +85,19 @@ class ConversationsListAPIView(APIView):
 
             if user.role == 'investor':
                 other_user = offer.project.owner.user
+                try:
+                    profile_picture = request.build_absolute_uri(other_user.project_owner_profile.profile_picture.url) \
+                        if other_user.project_owner_profile.profile_picture else None
+                except:
+                    profile_picture = None
             else:
                 other_user = offer.investor.user
+                try:
+                    profile_picture = request.build_absolute_uri(other_user.investor.profile_picture.url) \
+                        if other_user.investor.profile_picture else None
+                except:
+                    profile_picture = None
+
 
             unread_exists = Negotiation.objects.filter(
                 offer_id=offer_id,
@@ -101,7 +112,9 @@ class ConversationsListAPIView(APIView):
                 'last_message_time': last_msg.timestamp,
                 'is_read': not unread_exists,
                 'project_title': project.title,
+                'profile_picture': request.build_absolute_uri(profile_picture) if profile_picture else None
             })
+
 
         conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
 

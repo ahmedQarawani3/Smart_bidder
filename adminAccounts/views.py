@@ -33,7 +33,7 @@ class AdminCreateProjectOwnerView(APIView):
         if request.user.role != 'admin':
             raise PermissionDenied("Only admins can create project owners.")
 
-        serializer = AdminCreateInvestorSerializer(data=request.data, context={'request': request})
+        serializer = AdminCreateProjectOwnerSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Project owner account created successfully by admin.'}, status=status.HTTP_201_CREATED)

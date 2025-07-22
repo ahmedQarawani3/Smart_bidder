@@ -253,3 +253,104 @@ class ImportantAdminNotificationsView(generics.ListAPIView):
         qs = Notification.objects.filter(user=user).filter(query).order_by('-created_at')
         return qs
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from projectOwner.models import Project
+from .serializer import ProjectEvaluationSerializer
+import httpx
+import traceback
+from decimal import Decimal
+
+class EvaluateProjectAIView(APIView):
+    def get(self, request, pk):
+        try:
+            project = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ProjectEvaluationSerializer(project)
+        project_data = serializer.data
+
+        feasibility_data = project_data.pop('feasibility_study', {})
+        for key, value in feasibility_data.items():
+            if isinstance(value, Decimal):
+                value = float(value)
+            project_data[key] = value
+
+        print("🟢 Final AI Payload:", project_data)
+
+        try:
+            ai_response = httpx.post(
+                "http://127.0.0.1:8005/evaluate-project",
+                json=project_data,
+                timeout=30.0
+            )
+
+            if ai_response.status_code == 200:
+                result = ai_response.json()
+                return Response({
+                    "score": result.get("score"),
+                    "message": result.get("message")
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                "error": "AI service error",
+                "details": ai_response.text
+            }, status=ai_response.status_code)
+
+        except Exception as e:
+            print("🔥 EXCEPTION:", str(e))
+            traceback.print_exc()
+            return Response({
+                "error": "Internal Server Error",
+                "details": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+from .serializer import ProjectEvaluationSerializer
+from projectOwner.serializer import ProjectSerializer
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.shortcuts import get_object_or_404
+
+
+class CreateProjectView(generics.CreateAPIView):
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def perform_create(self, serializer):
+        owner = get_object_or_404(ProjectOwner, user=self.request.user)
+        project = serializer.save(owner=owner, status='pending')
+
+        # ✅ استخراج بيانات دراسة الجدوى المرتبطة بهذا المشروع
+        feasibility = getattr(project, "feasibility_study", None)
+        if not feasibility:
+            return  # ما في دراسة جدوى؟ نخرج
+
+        # ✅ تجهيز البيانات لإرسالها إلى AI
+        ai_payload = {
+            "title": project.title,
+            "description": project.description,
+            "idea_summary": project.idea_summary,
+            "problem_solving": project.problem_solving,
+            "category": project.category,
+            "readiness_level": project.readiness_level,
+            "funding_required": float(feasibility.funding_required),
+            "current_revenue": float(feasibility.current_revenue or 0),
+            "expected_monthly_revenue": feasibility.expected_monthly_revenue,
+            "expected_profit_margin": feasibility.expected_profit_margin,
+            "roi_period_months": feasibility.roi_period_months,
+            "growth_opportunity": feasibility.growth_opportunity,
+        }
+
+        try:
+            import httpx
+            ai_res = httpx.post("http://127.0.0.1:8005/evaluate-project", json=ai_payload, timeout=30.0)
+
+            if ai_res.status_code == 200:
+                result = ai_res.json()
+                score = result.get("score")
+                if score is not None:
+                    feasibility.ai_score = score
+                    feasibility.save()
+        except Exception as e:
+            print("⚠ AI Evaluation Error:", str(e))
