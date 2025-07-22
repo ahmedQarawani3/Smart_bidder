@@ -321,12 +321,15 @@ class CreateProjectView(generics.CreateAPIView):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         project = serializer.save(owner=owner, status='pending')
 
-        # ✅ استخراج بيانات دراسة الجدوى المرتبطة بهذا المشروع
+        # 🟡 نحضّر ai_score كمجال مؤقت في الكلاس
+        self.ai_score = None
+
+        # ✅ استخراج دراسة الجدوى
         feasibility = getattr(project, "feasibility_study", None)
         if not feasibility:
-            return  # ما في دراسة جدوى؟ نخرج
+            return
 
-        # ✅ تجهيز البيانات لإرسالها إلى AI
+        # ✅ تجهيز البيانات لإرسالها إلى خدمة الذكاء الاصطناعي
         ai_payload = {
             "title": project.title,
             "description": project.description,
@@ -350,7 +353,17 @@ class CreateProjectView(generics.CreateAPIView):
                 result = ai_res.json()
                 score = result.get("score")
                 if score is not None:
-                    feasibility.ai_score = score
-                    feasibility.save()
+                    # 🔄 لا نحفظه في قاعدة البيانات، فقط نخزنه مؤقتًا
+                    self.ai_score = score
         except Exception as e:
             print("⚠ AI Evaluation Error:", str(e))
+
+    def create(self, request, *args, **kwargs):
+        # 🔁 الاستدعاء الأساسي لإنشاء المشروع
+        response = super().create(request, *args, **kwargs)
+
+        # ✅ نضيف ai_score للاستجابة فقط إذا كان موجود
+        if hasattr(self, "ai_score") and self.ai_score is not None:
+            response.data["ai_score"] = self.ai_score
+
+        return response
