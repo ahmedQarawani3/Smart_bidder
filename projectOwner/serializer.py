@@ -15,16 +15,20 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
         exclude = ['project', 'created_at']  # سيتم ربطها لاحقاً بالمشروع تلقائياً
 
 
+# serializers.py
+
 class ProjectSerializer(serializers.ModelSerializer):
     files = ProjectFileSerializer(many=True, write_only=True, required=False)
     feasibility_study = FeasibilityStudySerializer(required=True)
+    image = serializers.ImageField(required=False, allow_null=True)  # إضافة حقل الصورة
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'idea_summary', 'problem_solving',
-            'category', 'readiness_level', 'files', 'feasibility_study', 'status'
+            'category', 'readiness_level', 'files', 'feasibility_study', 'status', 'image'
         ]
+
 
     def validate(self, data):
         feasibility_data = data.get('feasibility_study', {})
@@ -147,12 +151,15 @@ class FeasibilityStudySerializer(serializers.ModelSerializer):
 
 from datetime import timedelta
 from django.utils import timezone
+from rest_framework import serializers
+from django.conf import settings
+
 class ProjectDetailsSerializer(serializers.ModelSerializer):
     feasibility_study = FeasibilityStudySerializer()
     files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
     time_left_to_auto_close = serializers.SerializerMethodField()
     owner_name = serializers.CharField(source='owner.user.full_name', read_only=True)
-
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -161,8 +168,18 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
             "feasibility_study", "files", "time_left_to_auto_close",
-            "owner_name", 
+            "owner_name", "image_url",
         ]
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            else:
+                return obj.image.url
+        return None
+
 
     def get_time_left_to_auto_close(self, project):
         offers = InvestmentOffer.objects.filter(

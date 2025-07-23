@@ -15,11 +15,29 @@ def get_admin_users():
     return User.objects.filter(role='admin', is_active=True)
 
 # ✅ Notify when a project is created or updated
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from projectOwner.models import Project
+from accounts.models import User,Notification
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from accounts.models import User
+
+def get_admin_users():
+    return User.objects.filter(role='admin')
+
 @receiver(post_save, sender=Project)
 def notify_admin_project_updated(sender, instance, created, **kwargs):
-    message = f"{'Project created:' if created else 'Project updated:'} {instance.title}"
+    # نتجاهل إذا كانت الحالة أصبحت active أو closed => يعني تمت الموافقة أو الرفض
+    if not created and instance.status in ['active', 'closed']:
+        return  # لا ترسل إشعار في حال الموافقة أو الرفض
+
+    message = f"{'تم إنشاء مشروع جديد:' if created else 'تم تعديل المشروع:'} {instance.title} [ID: {instance.id}]"
     for admin in get_admin_users():
         Notification.objects.create(user=admin, message=message)
+
+
+
 
 # ✅ Notify when a project is deleted
 @receiver(post_delete, sender=Project)

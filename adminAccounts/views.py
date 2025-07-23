@@ -288,3 +288,48 @@ class DashboardStatsAPIView(APIView):
         }
 
         return Response(data)
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+from rest_framework import status
+from projectOwner.models import Project
+from projectOwner.serializer import ProjectDetailsSerializer  # لازم يكون عندك سيريلزر للتفاصيل
+from projectOwner.utils import notify_user  # فرضاً دالة لإرسال الإشعارات
+
+class AdminApproveProjectUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, project_id):
+        try:
+            project = Project.objects.get(id=project_id, status='pending')
+        except Project.DoesNotExist:
+            return Response({"detail": "No pending project found with this ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        # هنا تفترض ان الموافقة تعني تغيير الحالة إلى active (أو حسب منطقك)
+        project.status = 'active'
+        project.save()
+
+        # إرسال إشعار لصاحب المشروع (اختياري)
+        notify_user(project.owner.user, f"تمت الموافقة على تعديل مشروعك '{project.title}'.")
+
+        return Response({"detail": "Project update approved."}, status=status.HTTP_200_OK)
+
+
+class AdminRejectProjectUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, project_id):
+        try:
+            project = Project.objects.get(id=project_id, status='pending')
+        except Project.DoesNotExist:
+            return Response({"detail": "No pending project found with this ID."}, status=status.HTTP_404_NOT_FOUND)
+
+        # رفض التعديل: نرجع المشروع لحالته السابقة أو حالة خاصة (مثلاً 'active' أو غيرها)
+        # إذا عندك نسخة سابقة محفوظة للتراجع، تحتاج منطق إضافي، هنا بس نرجع لـ active بشكل مبسط:
+        project.status = 'active'  # أو يمكن 'needs_revision' أو حسب ما تحدد
+        project.save()
+
+        # إرسال إشعار لصاحب المشروع (اختياري)
+        notify_user(project.owner.user, f"تم رفض تعديل مشروعك '{project.title}'. الرجاء تعديل البيانات وإعادة المحاولة.")
+
+        return Response({"detail": "Project update rejected."}, status=status.HTTP_200_OK)

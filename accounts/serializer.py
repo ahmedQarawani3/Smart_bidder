@@ -214,3 +214,74 @@ class ProjectEvaluationSerializer(serializers.ModelSerializer):
             'feasibility_study'
         ]
 
+# accounts/serializers.py
+from rest_framework import serializers
+from .models import User
+
+from rest_framework import serializers
+class ProjectOwnerProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+    id_card_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectOwner
+        fields = ['bio', 'profile_picture', 'id_card_picture', 'terms_agreed']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url) if request else obj.profile_picture.url
+        return None
+
+    def get_id_card_picture(self, obj):
+        request = self.context.get('request')
+        if obj.id_card_picture:
+            return request.build_absolute_uri(obj.id_card_picture.url) if request else obj.id_card_picture.url
+        return None
+
+
+class InvestorProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.SerializerMethodField()
+    id_card_picture = serializers.SerializerMethodField()
+    commercial_register_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Investor
+        fields = ['company_name', 'commercial_register', 'phone_number', 'profile_picture', 'id_card_picture', 'commercial_register_picture']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url) if request else obj.profile_picture.url
+        return None
+
+    def get_id_card_picture(self, obj):
+        request = self.context.get('request')
+        if obj.id_card_picture:
+            return request.build_absolute_uri(obj.id_card_picture.url) if request else obj.id_card_picture.url
+        return None
+
+    def get_commercial_register_picture(self, obj):
+        request = self.context.get('request')
+        if obj.commercial_register_picture:
+            return request.build_absolute_uri(obj.commercial_register_picture.url) if request else obj.commercial_register_picture.url
+        return None
+
+
+class UserReviewSerializer(serializers.ModelSerializer):
+    project_owner_profile = serializers.SerializerMethodField()
+    investor_profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email', 'phone_number', 'role', 'created_at', 'is_active', 'project_owner_profile', 'investor_profile']
+
+    def get_project_owner_profile(self, obj):
+        if obj.role == 'owner' and hasattr(obj, 'project_owner_profile'):
+            return ProjectOwnerProfileSerializer(obj.project_owner_profile, context=self.context).data
+        return None
+
+    def get_investor_profile(self, obj):
+        if obj.role == 'investor' and hasattr(obj, 'investor'):
+            return InvestorProfileSerializer(obj.investor, context=self.context).data
+        return None

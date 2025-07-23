@@ -311,6 +311,16 @@ from projectOwner.serializer import ProjectSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, permissions
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from accounts.models import Notification
+from django.contrib.auth import get_user_model
+import httpx
+
+User = get_user_model()
+
+
 
 class CreateProjectView(generics.CreateAPIView):
     serializer_class = ProjectSerializer
@@ -321,15 +331,14 @@ class CreateProjectView(generics.CreateAPIView):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         project = serializer.save(owner=owner, status='pending')
 
-        # 🟡 نحضّر ai_score كمجال مؤقت في الكلاس
+        # الـ AI evaluation مفصول كما طلبت، لا تعدل عليه
         self.ai_score = None
+        self.ai_comment = None
 
-        # ✅ استخراج دراسة الجدوى
         feasibility = getattr(project, "feasibility_study", None)
         if not feasibility:
             return
 
-        # ✅ تجهيز البيانات لإرسالها إلى خدمة الذكاء الاصطناعي
         ai_payload = {
             "title": project.title,
             "description": project.description,
@@ -346,24 +355,90 @@ class CreateProjectView(generics.CreateAPIView):
         }
 
         try:
-            import httpx
             ai_res = httpx.post("http://127.0.0.1:8005/evaluate-project", json=ai_payload, timeout=30.0)
 
             if ai_res.status_code == 200:
                 result = ai_res.json()
-                score = result.get("score")
-                if score is not None:
-                    # 🔄 لا نحفظه في قاعدة البيانات، فقط نخزنه مؤقتًا
-                    self.ai_score = score
+                self.ai_score = result.get("score")
+                self.ai_comment = result.get("message")
+
+                # إشعار للأدمن فقط، دون حفظ score/comment في المشروع
+                if self.ai_score is not None and self.ai_comment:
+                    admins = User.objects.filter(role='admin')
+                    for admin in admins:
+                        Notification.objects.create(
+                            user=admin,
+                            message=f"مشروع جديد '{project.title}' تم تقييمه بسكور {self.ai_score} وملاحظة: {self.ai_comment}"
+                        )
+
         except Exception as e:
             print("⚠ AI Evaluation Error:", str(e))
 
     def create(self, request, *args, **kwargs):
-        # 🔁 الاستدعاء الأساسي لإنشاء المشروع
         response = super().create(request, *args, **kwargs)
 
-        # ✅ نضيف ai_score للاستجابة فقط إذا كان موجود
-        if hasattr(self, "ai_score") and self.ai_score is not None:
+        if hasattr(self, "ai_score"):
             response.data["ai_score"] = self.ai_score
+        if hasattr(self, "ai_comment"):
+            response.data["ai_comment"] = self.ai_comment
 
         return response
+
+
+
+# accounts/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import User
+from .serializer import UserReviewSerializer
+from .models import Notification
+
+class PendingUserDetailView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id, is_active=False)
+            serializer = UserReviewSerializer(user, context={'request': request})
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({"error": "User not found or already active."}, status=404)
+
+
+
+class ApproveUserView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id, is_active=False)
+            user.is_active = True
+            user.save()
+
+            Notification.objects.create(
+                user=user,
+                message="Your account has been approved by the admin."
+            )
+
+            return Response({"message": "User approved successfully."})
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=404)
+
+
+class RejectUserView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id, is_active=False)
+
+            Notification.objects.create(
+                user=user,
+                message="Your account has been rejected by the admin."
+            )
+
+            user.delete()
+            return Response({"message": "User rejected and deleted successfully."})
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=404)

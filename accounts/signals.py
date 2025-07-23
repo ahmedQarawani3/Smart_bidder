@@ -122,3 +122,26 @@ def notify_admin_on_ai_score(sender, instance, created, **kwargs):
                     user=admin,
                     message=f"AI score reached: {instance.ai_score} for project {instance.project.title}"
                 )
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from accounts.models import Notification  # عدّل هذا المسار حسب مكان الموديل عندك
+
+User = get_user_model()
+
+@receiver(post_save, sender=User)
+def notify_admin_on_user_creation(sender, instance, created, **kwargs):
+    if created and instance.role in ['investor', 'owner']:
+        role_display = 'Investor' if instance.role == 'investor' else 'Project Owner'
+
+        # Notification message with user ID
+        message = f"New account created ({role_display}) with name: {instance.full_name}. Awaiting your approval. ID:{instance.id}"
+
+        # Send notification to all admins
+        admins = User.objects.filter(role='admin')
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                message=message
+            )

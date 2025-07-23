@@ -62,15 +62,28 @@ from projectOwner.models import Project
 #عرض المشاريغ للمستثمر بدون تفاضيل
 class ProjectFundingSerializer(serializers.ModelSerializer):
     funding_required = serializers.SerializerMethodField()
-    expected_monthly_revenue=serializers.SerializerMethodField()
+    expected_monthly_revenue = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
         fields = [
             "id", "title", "description", "status",
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", 
-            "funding_required","expected_monthly_revenue"
+            "funding_required", "expected_monthly_revenue",
+            "image_url",
         ]
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            else:
+                return obj.image.url
+        return None
+
     def get_funding_required(self, obj):
         if hasattr(obj, 'feasibility_study') and obj.feasibility_study:
             return obj.feasibility_study.funding_required
@@ -97,20 +110,54 @@ class OfferStatisticsSerializer(serializers.Serializer):
     rejected_offers = serializers.IntegerField()
     total_invested_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
 #عرض كل المشاريع يلي قدم عليها المستثمر
+from rest_framework import serializers
+
 class ProjectMiniSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
-        fields = ['id', 'title', 'category', 'status', 'readiness_level']
+        fields = ['id', 'title', 'category', 'status', 'readiness_level', 'image_url']
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            else:
+                return obj.image.url
+        return None
+
 #عرض كل المشاريع يلي قدم عليها المستثمر
 class InvestmentOfferSerializer(serializers.ModelSerializer):
-    project = ProjectMiniSerializer()  # ربط العرض بالمشروع المصغر
+    investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    investor_profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = InvestmentOffer
         fields = [
-            'id', 'amount', 'equity_percentage', 'additional_terms', 
-            'status', 'created_at', 'updated_at', 'project'
+            'id',
+            'amount',
+            'equity_percentage',
+            'additional_terms',
+            'status',
+            'created_at',
+            'investor_name',
+            'investor_profile_picture',
+            'project_title',
+            'project',
         ]
+
+    def get_investor_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.investor.profile_picture:
+            url = obj.investor.profile_picture.url
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
+
 from rest_framework import serializers
 from accounts.models import User
 from .models import Investor
@@ -157,22 +204,32 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
 class InvestorSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
-    profile_picture = serializers.ImageField()  # ✅ إضافة هذا السطر
+    profile_picture = serializers.SerializerMethodField()
 
     class Meta:
         model = Investor
         fields = ['id', 'user', 'profile_picture', 'rating_score']
+
+    def get_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url) if request else obj.profile_picture.url
+        return None
+
+
 
 
 
 class ProjectOwnerSerializer(serializers.ModelSerializer):
     user = UserBasicSerializer()
     profile_picture_url = serializers.SerializerMethodField()
-    final_rating = serializers.FloatField(source='rating_score', read_only=True)
+    final_rating = serializers.FloatField( read_only=True)
+    bio = serializers.CharField()
 
     class Meta:
         model = ProjectOwner
-        fields = ['id', 'user', 'final_rating', 'profile_picture_url']
+        fields = ['id', 'user', 'final_rating', 'profile_picture_url', 'bio']
+
 
     def get_profile_picture_url(self, obj):
         request = self.context.get('request')

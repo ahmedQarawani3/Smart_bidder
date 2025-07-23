@@ -219,30 +219,26 @@ class ConversationDetailAPIView(APIView):
         return Response(serializer.data)
 
 #عرض تفاصبل المشروع للمسثمر 
-class ProjectDetailView(RetrieveAPIView):
-    """
-    عرض تفاصيل مشروع معين عند الضغط عليه من قبل المستثمر
-    """
+class ProjectDetailView(generics.RetrieveAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectDetailsSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         user = self.request.user
-
-        # التحقق من أن المستخدم مستثمر فقط
         if not hasattr(user, 'role') or user.role != 'investor':
             raise PermissionDenied("فقط المستثمر يمكنه رؤية تفاصيل المشروع.")
-
         return super().get_object()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
 
 #عرض المشاريع للمستثمر
 class ProjectFundingOnlyListView(generics.ListAPIView):
-    """
-    عرض المشاريع مع التمويل المطلوب فقط، للمستثمرين فقط
-    """
     serializer_class = ProjectFundingSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -253,6 +249,11 @@ class ProjectFundingOnlyListView(generics.ListAPIView):
         return Project.objects.filter(
             Q(status='active') | Q(status='under_negotiation')
         )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
 
 from projectOwner.utils import auto_close_project_if_expired
 
@@ -359,6 +360,13 @@ class InvestorOfferStatisticsAPIView(APIView):
 
 from .serializer import InvestmentOfferSerializer
 
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+
 class MyOffersListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -366,19 +374,21 @@ class MyOffersListAPIView(APIView):
         user = request.user
 
         # تحقق من أن المستخدم هو مستثمر
-        if user.role != 'investor':
-            return Response({'detail': 'Unauthorized'}, status=403)
+        if getattr(user, 'role', None) != 'investor':
+            return Response({'detail': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
 
-        try:
-            investor = user.investor
-        except:
-            return Response({'detail': 'Investor profile not found.'}, status=404)
+        investor = getattr(user, 'investor', None)
+        if not investor:
+            return Response({'detail': 'Investor profile not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # جلب كل العروض المقدمة من هذا المستثمر
+        # جلب كل العروض المقدمة من هذا المستثمر مع المشروع المرتبط
         offers = InvestmentOffer.objects.filter(investor=investor).select_related('project')
 
-        serializer = InvestmentOfferSerializer(offers, many=True)
-        return Response(serializer.data)
+        serializer = InvestmentOfferSerializer(offers, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 
 
 from rest_framework import generics, permissions
@@ -427,6 +437,6 @@ class TopInvestorsAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        investors = Investor.objects.filter(rating_score__gt=0).order_by('-rating_score')[:5]
-        serializer = InvestorSerializer(investors, many=True)
+        investors = Investor.objects.all().order_by('-rating_score')[:10]
+        serializer = InvestorSerializer(investors, many=True, context={'request': request})
         return Response(serializer.data)
