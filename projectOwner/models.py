@@ -82,6 +82,7 @@ class FeasibilityStudy(models.Model):
     risk_assessment = models.FloatField(default=0)     # تقييم المخاطر - يتم حسابه تلقائيًا
     competitive_edge = models.FloatField(default=0)    # الميزة التنافسية - يتم حسابها تلقائيًا
     overall_score = models.FloatField(default=0)       # التقييم العام للمشروع - يتم حسابه تلقائيًا
+    ai_score = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"Feasibility for Project {self.project.title}"
