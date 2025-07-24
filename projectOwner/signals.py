@@ -76,30 +76,130 @@ def notify_project_status_change(sender, instance, created, **kwargs):
             message = f"The status of your project '{instance.title}' has been updated to: {instance.status}"
             Notification.objects.create(user=instance.owner.user, message=message)
 
+#يلي تحت كلو وقت يعدل مشروغ
 
 # 6- إشعار الأدمن عند إنشاء أو تعديل مشروع (بدون تعديل الحالة)
+# signals.py
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from django.db.models.signals import pre_save, post_save
+from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+# Temporary cache for old instances before saving
+OLD_PROJECTS_CACHE = {}
+OLD_FEASIBILITY_CACHE = {}
+
 def get_admin_users():
     return User.objects.filter(role='admin', is_active=True)
+
+@receiver(pre_save, sender=Project)
+def cache_old_project(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_instance = sender.objects.get(pk=instance.pk)
+            OLD_PROJECTS_CACHE[instance.pk] = {
+                'title': old_instance.title,
+                'description': old_instance.description,
+                'status': old_instance.status,
+                'idea_summary': old_instance.idea_summary,
+                'problem_solving': old_instance.problem_solving,
+                'category': old_instance.category,
+                'readiness_level': old_instance.readiness_level,
+                'image': old_instance.image.url if old_instance.image else None,
+            }
+        except sender.DoesNotExist:
+            pass
+
+@receiver(pre_save, sender=FeasibilityStudy)
+def cache_old_feasibility(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_instance = sender.objects.get(pk=instance.pk)
+            OLD_FEASIBILITY_CACHE[instance.pk] = {
+                'current_revenue': old_instance.current_revenue,
+                'funding_required': old_instance.funding_required,
+                'marketing_investment_percentage': old_instance.marketing_investment_percentage,
+                'team_investment_percentage': old_instance.team_investment_percentage,
+                'expected_monthly_revenue': old_instance.expected_monthly_revenue,
+                'roi_period_months': old_instance.roi_period_months,
+                'expected_profit_margin': old_instance.expected_profit_margin,
+                'growth_opportunity': old_instance.growth_opportunity,
+            }
+        except sender.DoesNotExist:
+            pass
 
 @receiver(post_save, sender=Project)
 def notify_admin_project_created_or_edited(sender, instance, created, **kwargs):
     if created:
-        message = f"📌 مشروع جديد قيد الموافقة: {instance.title}"
+        message = f"📌 New project awaiting approval: {instance.title}"
+        for admin in get_admin_users():
+            Notification.objects.create(user=admin, message=message)
     else:
-        # لا تعدل حالة المشروع هنا لتجنب override
-        message = f"✏ تم تعديل المشروع '{instance.title}' من قبل صاحبه ويحتاج إلى موافقة جديدة."
-    for admin in get_admin_users():
-        Notification.objects.create(user=admin, message=message)
+        old_data = OLD_PROJECTS_CACHE.pop(instance.pk, None)
+        if not old_data:
+            return
+
+        changes = []
+        fields_to_check = ['title', 'description', 'status', 'idea_summary', 'problem_solving', 'category', 'readiness_level']
+
+        for field in fields_to_check:
+            old_value = old_data.get(field)
+            new_value = getattr(instance, field)
+            if old_value != new_value:
+                changes.append(f"✏ Field '{field}' changed from '{old_value}' to '{new_value}'")
+
+        old_image = old_data.get('image')
+        new_image = instance.image.url if instance.image else None
+        if old_image != new_image:
+            changes.append(f"✏ Field 'image' changed from '{old_image}' to '{new_image}'")
+
+        if changes:
+            message = f"🔔 Project '{instance.title}' has been updated and requires approval:\n" + "\n".join(changes)
+            for admin in get_admin_users():
+                Notification.objects.create(user=admin, message=message)
+
+@receiver(post_save, sender=FeasibilityStudy)
+def notify_admin_feasibility_edited(sender, instance, created, **kwargs):
+    if created:
+        return  # Optionally notify on creation here if needed
+
+    old_data = OLD_FEASIBILITY_CACHE.pop(instance.pk, None)
+    if not old_data:
+        return
+
+    changes = []
+    fields_to_check = [
+        'current_revenue', 'funding_required', 'marketing_investment_percentage',
+        'team_investment_percentage', 'expected_monthly_revenue', 'roi_period_months',
+        'expected_profit_margin', 'growth_opportunity'
+    ]
+
+    for field in fields_to_check:
+        old_value = old_data.get(field)
+        new_value = getattr(instance, field)
+        if old_value != new_value:
+            changes.append(f"✏ Field '{field}' changed from '{old_value}' to '{new_value}'")
+
+    if changes:
+        project_title = instance.project.title if instance.project else "Unknown project"
+        message = f"🔔 Feasibility study for project '{project_title}' has been updated:\n" + "\n".join(changes)
+        for admin in get_admin_users():
+            Notification.objects.create(user=admin, message=message)
+
+
+#يلي فوق كلو وقت يعدل مشروغ
+
+
+
 
 
 # 7- إشعار الأدمن عند تعديل دراسة الجدوى (بدون تعديل الحالة)
-@receiver(post_save, sender=FeasibilityStudy)
-def notify_admin_on_feasibility_update(sender, instance, created, **kwargs):
-    if not created:
-        project = instance.project
-        message = f"📊 تم تعديل دراسة الجدوى الخاصة بالمشروع '{project.title}' ويحتاج إلى مراجعة."
-        for admin in get_admin_users():
-            Notification.objects.create(user=admin, message=message)
+
 
 
 # 8- تحديث تقييم المستخدم عند إنشاء تقييم

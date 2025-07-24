@@ -108,20 +108,17 @@ from django.contrib.auth import get_user_model
 from accounts.models import Notification
 from projectOwner.models import FeasibilityStudy
 
-User = get_user_model()
+# User = get_user_model()
 
-@receiver(post_save, sender=FeasibilityStudy)
-def notify_admin_on_ai_score(sender, instance, created, **kwargs):
-    if instance.ai_score is not None:
-        # منعت التكرار: نرسل إشعار فقط إذا السكور انحط لأول مرة أو تغير
-        if not instance._state.adding and 'ai_score' in instance.get_dirty_fields():
-            # الحصول على جميع الأدمنات
-            admins = User.objects.filter(role='admin')
-            for admin in admins:
-                Notification.objects.create(
-                    user=admin,
-                    message=f"AI score reached: {instance.ai_score} for project {instance.project.title}"
-                )
+# @receiver(post_save, sender=FeasibilityStudy)
+# def notify_admin_on_ai_score(sender, instance, created, **kwargs):
+#     if instance.ai_score is not None:
+#         admins = User.objects.filter(role='admin')
+#         for admin in admins:
+#             Notification.objects.create(
+#                 user=admin,
+#                 message=f"AI score reached: {instance.ai_score} for project {instance.project.title}"
+#             )
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings

@@ -155,11 +155,12 @@ from rest_framework import serializers
 from django.conf import settings
 
 class ProjectDetailsSerializer(serializers.ModelSerializer):
-    feasibility_study = FeasibilityStudySerializer()
+    feasibility_study = FeasibilityStudySerializer(required=False)
     files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
     time_left_to_auto_close = serializers.SerializerMethodField()
     owner_name = serializers.CharField(source='owner.user.full_name', read_only=True)
     image_url = serializers.SerializerMethodField()
+    needs_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
@@ -168,18 +169,15 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
             "feasibility_study", "files", "time_left_to_auto_close",
-            "owner_name", "image_url",
+            "owner_name", "image_url", "needs_review"
         ]
+        read_only_fields = ('status', 'files', 'owner_name', 'time_left_to_auto_close', 'image_url', 'needs_review')
 
     def get_image_url(self, obj):
         request = self.context.get('request')
         if obj.image and hasattr(obj.image, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            else:
-                return obj.image.url
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         return None
-
 
     def get_time_left_to_auto_close(self, project):
         offers = InvestmentOffer.objects.filter(
@@ -194,24 +192,26 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
         deadline = first_offer.created_at + timedelta(days=20)
         remaining = (deadline - timezone.now()).days
 
-        if remaining <= 0:
-            return "Project should be closed"
-        return f"{remaining} day(s) left until auto-close"
+        return "Project should be closed" if remaining <= 0 else f"{remaining} day(s) left until auto-close"
+
+    def get_needs_review(self, obj):
+        return obj.status == "pending"
 
     def update(self, instance, validated_data):
         feasibility_data = validated_data.pop('feasibility_study', None)
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
+        # جمع التعديلات المؤقتة
+        pending = validated_data.copy()
         if feasibility_data:
-            feasibility_instance = instance.feasibility_study
-            for attr, value in feasibility_data.items():
-                setattr(feasibility_instance, attr, value)
-            feasibility_instance.save()
+            pending['feasibility_study'] = feasibility_data
 
+        # حفظ التعديلات في حقل JSON مؤقت
+        instance.pending_changes = pending
+        # تغيير الحالة إلى pending
+        instance.status = "pending"
+        instance.save()
         return instance
+
+
 
 
 

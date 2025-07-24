@@ -333,3 +333,34 @@ class AdminRejectProjectUpdateView(APIView):
         notify_user(project.owner.user, f"تم رفض تعديل مشروعك '{project.title}'. الرجاء تعديل البيانات وإعادة المحاولة.")
 
         return Response({"detail": "Project update rejected."}, status=status.HTTP_200_OK)
+
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+class AdminProjectReviewView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, project_id):
+        if request.user.role != "admin":
+            return Response({"detail": "You are not authorized."}, status=403)
+
+        action = request.data.get("action")  # "accept" or "reject"
+        if action not in ["accept", "reject"]:
+            return Response({"detail": "Invalid action."}, status=400)
+
+        try:
+            project = Project.objects.get(id=project_id)
+        except Project.DoesNotExist:
+            return Response({"detail": "Project not found."}, status=404)
+
+        if action == "accept":
+            project.status = "active"
+            project.save()
+            notify_user(project.owner.user, f"✅ تم قبول تعديلات مشروعك: {project.title}")
+        elif action == "reject":
+            notify_user(project.owner.user, f"❌ تم رفض تعديلات مشروعك: {project.title}. الرجاء مراجعته.")
+
+        return Response({"detail": f"Project {action}ed successfully."})

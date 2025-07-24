@@ -306,6 +306,7 @@ class EvaluateProjectAIView(APIView):
                 "error": "Internal Server Error",
                 "details": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 from .serializer import ProjectEvaluationSerializer
 from projectOwner.serializer import ProjectSerializer
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -331,7 +332,7 @@ class CreateProjectView(generics.CreateAPIView):
         owner = get_object_or_404(ProjectOwner, user=self.request.user)
         project = serializer.save(owner=owner, status='pending')
 
-        # الـ AI evaluation مفصول كما طلبت، لا تعدل عليه
+        # AI evaluation
         self.ai_score = None
         self.ai_comment = None
 
@@ -362,7 +363,12 @@ class CreateProjectView(generics.CreateAPIView):
                 self.ai_score = result.get("score")
                 self.ai_comment = result.get("message")
 
-                # إشعار للأدمن فقط، دون حفظ score/comment في المشروع
+                # تحديث السكور داخل feasibility study (اختياري)
+                if self.ai_score is not None:
+                    feasibility.ai_score = self.ai_score
+                    feasibility.save(update_fields=['ai_score'])
+
+                # إرسال إشعار للأدمن
                 if self.ai_score is not None and self.ai_comment:
                     admins = User.objects.filter(role='admin')
                     for admin in admins:
@@ -383,6 +389,7 @@ class CreateProjectView(generics.CreateAPIView):
             response.data["ai_comment"] = self.ai_comment
 
         return response
+
 
 
 
