@@ -123,17 +123,53 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from accounts.models import Notification  # عدّل هذا المسار حسب مكان الموديل عندك
+from accounts.models import Notification 
+from projectOwner.models import ProjectOwner
+ # عدّل هذا المسار حسب مكان الموديل عندك
 
-User = get_user_model()
+@receiver(post_save, sender=Investor)
+def notify_admin_on_investor_creation(sender, instance, created, **kwargs):
+    if created:
+        user = instance.user
+        role_display = 'Investor'
+        
+        # جمع معلومات إضافية
+        additional_info = []
+        if getattr(instance, 'company_name', None):
+            additional_info.append(f"Company: {instance.company_name}")
+        if getattr(instance, 'commercial_register', None):
+            additional_info.append(f"Commercial Register: {instance.commercial_register}")
+        if getattr(instance, 'phone_number', None):
+            additional_info.append(f"Phone: {instance.phone_number}")
+            
+        # Notification message with user details
+        details = " | ".join(additional_info) if additional_info else "Basic registration only"
+        message = f"New account created ({role_display}) with name: {user.full_name}. {details}. View details: /api/new-user-detail/{user.id}/. ID:{user.id}"
 
-@receiver(post_save, sender=User)
-def notify_admin_on_user_creation(sender, instance, created, **kwargs):
-    if created and instance.role in ['investor', 'owner']:
-        role_display = 'Investor' if instance.role == 'investor' else 'Project Owner'
+        # Send notification to all admins
+        admins = User.objects.filter(role='admin')
+        for admin in admins:
+            Notification.objects.create(
+                user=admin,
+                message=message
+            )
 
-        # Notification message with user ID
-        message = f"New account created ({role_display}) with name: {instance.full_name}. Awaiting your approval. ID:{instance.id}"
+@receiver(post_save, sender=ProjectOwner)
+def notify_admin_on_owner_creation(sender, instance, created, **kwargs):
+    if created:
+        user = instance.user
+        role_display = 'Project Owner'
+        
+        # جمع معلومات إضافية
+        additional_info = []
+        if getattr(instance, 'phone_number', None):
+            additional_info.append(f"Phone: {instance.phone_number}")
+        if getattr(instance, 'bio', None):
+            additional_info.append(f"Bio: {instance.bio}")
+            
+        # Notification message with user details and API link
+        details = " | ".join(additional_info) if additional_info else "No profile details provided"
+        message = f"New account created ({role_display}) with name: {user.full_name}. {details}. View details: /api/new-user-detail/{user.id}/. ID:{user.id}"
 
         # Send notification to all admins
         admins = User.objects.filter(role='admin')

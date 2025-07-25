@@ -285,3 +285,45 @@ class UserReviewSerializer(serializers.ModelSerializer):
         if obj.role == 'investor' and hasattr(obj, 'investor'):
             return InvestorProfileSerializer(obj.investor, context=self.context).data
         return None
+
+# serializers.py
+from rest_framework import serializers
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'username', 'email', 'phone_number', 'role', 'language_preference', 'created_at', 'is_active']
+
+class InvestorDetailSerializer(serializers.ModelSerializer):
+    user = UserDetailSerializer()
+    created_by_name = serializers.CharField(source='created_by.full_name', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = Investor
+        fields = [
+            'user', 'company_name', 'commercial_register', 'phone_number',
+            'profile_picture', 'id_card_picture', 'commercial_register_picture',
+            'created_by_name', 'created_at'
+        ]
+
+class ProjectOwnerDetailSerializer(serializers.ModelSerializer):
+    user = UserDetailSerializer()
+    
+    class Meta:
+        model = ProjectOwner
+        fields = [
+            'user', 'bio', 'profile_picture', 'id_card_picture', 
+            'terms_agreed'
+        ]
+
+class NewUserDetailSerializer(serializers.ModelSerializer):
+    investor_details = InvestorDetailSerializer(source='investor', read_only=True, allow_null=True)
+    project_owner_details = ProjectOwnerDetailSerializer(source='project_owner_profile', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'full_name', 'username', 'email', 'phone_number', 'role', 
+            'language_preference', 'created_at', 'is_active',
+            'investor_details', 'project_owner_details'
+        ]

@@ -13,7 +13,7 @@ from .views import UserContextAPIView
 from .views import SubmitInvestorReviewAPIView
 from .views import ImportantAdminNotificationsView,EvaluateProjectAIView
 
-from .views import PendingUserDetailView, ApproveUserView, RejectUserView
+from .views import PendingUserDetailView, ApproveUserView, RejectUserView,NewUserDetailView
 
 urlpatterns = [
     path('register/project-owner/', ProjectOwnerRegisterView.as_view(), name='project_owner_register'),
@@ -31,5 +31,7 @@ urlpatterns = [
     path("evaluate-project/<int:pk>/", EvaluateProjectAIView.as_view(), name="evaluate-project"),
     path('review-user/<int:user_id>/', PendingUserDetailView.as_view()),
     path('approve-user/<int:user_id>/', ApproveUserView.as_view()),
-    path('reject-user/<int:user_id>/', RejectUserView.as_view())
+    path('reject-user/<int:user_id>/', RejectUserView.as_view()),
+    path('new-user-detail/<int:pk>/', NewUserDetailView.as_view(), name='new-user-detail')
+
 ]

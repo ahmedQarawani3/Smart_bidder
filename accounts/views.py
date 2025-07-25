@@ -241,7 +241,9 @@ class ImportantAdminNotificationsView(generics.ListAPIView):
         
         keywords = [
             "🔔 Project",
-            "🔔 Feasibility study"
+            "🔔 Feasibility study",
+            "New account created",
+            "Project Owner completed profile"  # إضافة جديدة
         ]
         
         query = reduce(lambda q1, q2: q1 | q2,
@@ -249,7 +251,6 @@ class ImportantAdminNotificationsView(generics.ListAPIView):
         
         qs = Notification.objects.filter(user=user).filter(query).order_by('-created_at')
         return qs
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -446,3 +447,14 @@ class RejectUserView(APIView):
             return Response({"message": "User rejected and deleted successfully."})
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=404)
+# views.py
+from .serializer import NewUserDetailSerializer
+class NewUserDetailView(generics.RetrieveAPIView):
+    serializer_class = NewUserDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.role != 'admin':
+            return User.objects.none()
+        return User.objects.all()
