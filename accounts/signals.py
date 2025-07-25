@@ -133,18 +133,8 @@ def notify_admin_on_investor_creation(sender, instance, created, **kwargs):
         user = instance.user
         role_display = 'Investor'
         
-        # جمع معلومات إضافية
-        additional_info = []
-        if getattr(instance, 'company_name', None):
-            additional_info.append(f"Company: {instance.company_name}")
-        if getattr(instance, 'commercial_register', None):
-            additional_info.append(f"Commercial Register: {instance.commercial_register}")
-        if getattr(instance, 'phone_number', None):
-            additional_info.append(f"Phone: {instance.phone_number}")
-            
-        # Notification message with user details
-        details = " | ".join(additional_info) if additional_info else "Basic registration only"
-        message = f"New account created ({role_display}) with name: {user.full_name}. {details}. View details: /api/new-user-detail/{user.id}/. ID:{user.id}"
+        # Notification message with name and role only
+        message = f"New account created: {user.full_name} ({role_display}). ID:{user.id}"
 
         # Send notification to all admins
         admins = User.objects.filter(role='admin')
@@ -160,16 +150,8 @@ def notify_admin_on_owner_creation(sender, instance, created, **kwargs):
         user = instance.user
         role_display = 'Project Owner'
         
-        # جمع معلومات إضافية
-        additional_info = []
-        if getattr(instance, 'phone_number', None):
-            additional_info.append(f"Phone: {instance.phone_number}")
-        if getattr(instance, 'bio', None):
-            additional_info.append(f"Bio: {instance.bio}")
-            
-        # Notification message with user details and API link
-        details = " | ".join(additional_info) if additional_info else "No profile details provided"
-        message = f"New account created ({role_display}) with name: {user.full_name}. {details}. View details: /api/new-user-detail/{user.id}/. ID:{user.id}"
+        # Notification message with name and role only
+        message = f"New account created: {user.full_name} ({role_display}). ID:{user.id}"
 
         # Send notification to all admins
         admins = User.objects.filter(role='admin')

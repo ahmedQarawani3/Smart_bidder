@@ -287,6 +287,7 @@ class UserReviewSerializer(serializers.ModelSerializer):
         return None
 
 # serializers.py
+# serializers.py
 from rest_framework import serializers
 
 class UserDetailSerializer(serializers.ModelSerializer):
