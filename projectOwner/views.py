@@ -99,7 +99,7 @@ class UpdateOfferStatusView(APIView):
 
         return Response({'message': 'Offer accepted successfully.'}, status=200)
 
-
+from accounts.models import Notification,User
 #update and get profile
 class UpdateProjectOwnerProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = ProjectOwnerUpdateSerializer
@@ -116,7 +116,6 @@ class MyProjectsListView(generics.ListAPIView):
     def get_queryset(self):
         return Project.objects.filter(owner__user=self.request.user)
 
-#تعديل مشروع خاص بي 
 class MyProjectUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -133,22 +132,19 @@ class MyProjectUpdateView(APIView):
         if serializer.is_valid():
             serializer.save()
 
-            # ✅ رفض العروض إذا كانت موجودة
+            # رفض العروض المعلقة
             offers = InvestmentOffer.objects.filter(project=project, status='pending')
-
             for offer in offers:
                 offer.status = 'rejected'
                 offer.save()
-                print(f"Rejected offer ID: {offer.id} for investor {offer.investor.user}")
-
                 message = f"Your offer for '{project.title}' has been rejected due to project updates by the owner."
                 notify_user(offer.investor.user, message)
+
 
 
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 #عرض active_projects_count وtotal_funding_required وtotal_investors_connected وpending_offers

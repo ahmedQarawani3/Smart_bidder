@@ -313,19 +313,3 @@ class SubmitComplaintSerializer(serializers.ModelSerializer):
         )
 
 
-from rest_framework import serializers
-from projectOwner.models import Project, FeasibilityStudy
-
-class ProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = '__all__'
-
-class FeasibilityStudySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FeasibilityStudy
-        fields = '__all__'
-        read_only_fields = ['ai_score']  # لأنه سيتم توليده تلقائيًا
-
-class AdminApprovalSerializer(serializers.Serializer):
-    approved = serializers.BooleanField()

@@ -155,7 +155,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 class ProjectDetailsSerializer(serializers.ModelSerializer):
-    feasibility_study = FeasibilityStudySerializer(required=False)
+    feasibility_study = FeasibilityStudySerializer()
     files = ProjectFileSerializer(source='projectfile_set', many=True, read_only=True)
     time_left_to_auto_close = serializers.SerializerMethodField()
     owner_name = serializers.CharField(source='owner.user.full_name', read_only=True)
@@ -165,13 +165,12 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = [
-            "id", "title", "description", "status",
+            "id","title", "description", "status",
             "category", "readiness_level", "idea_summary",
             "problem_solving", "created_at", "updated_at",
             "feasibility_study", "files", "time_left_to_auto_close",
             "owner_name", "image_url", "needs_review"
         ]
-        read_only_fields = ('status', 'files', 'owner_name', 'time_left_to_auto_close', 'image_url', 'needs_review')
 
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -195,22 +194,22 @@ class ProjectDetailsSerializer(serializers.ModelSerializer):
         return "Project should be closed" if remaining <= 0 else f"{remaining} day(s) left until auto-close"
 
     def get_needs_review(self, obj):
-        return obj.status == "pending"
+        return obj.status == "pending"  # لتظهر بالإدارة فقط وتفعل الزرين بالفرونت
 
     def update(self, instance, validated_data):
         feasibility_data = validated_data.pop('feasibility_study', None)
-        # جمع التعديلات المؤقتة
-        pending = validated_data.copy()
-        if feasibility_data:
-            pending['feasibility_study'] = feasibility_data
 
-        # حفظ التعديلات في حقل JSON مؤقت
-        instance.pending_changes = pending
-        # تغيير الحالة إلى pending
-        instance.status = "pending"
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         instance.save()
-        return instance
 
+        if feasibility_data:
+            feasibility_instance = instance.feasibility_study
+            for attr, value in feasibility_data.items():
+                setattr(feasibility_instance, attr, value)
+            feasibility_instance.save()
+
+        return instance
 
 
 

@@ -133,6 +133,7 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
     investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)
     project_title = serializers.CharField(source='project.title', read_only=True)
     investor_profile_picture = serializers.SerializerMethodField()
+    project_image = serializers.SerializerMethodField()
 
     class Meta:
         model = InvestmentOffer
@@ -147,6 +148,7 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
             'investor_profile_picture',
             'project_title',
             'project',
+            'project_image',
         ]
 
     def get_investor_profile_picture(self, obj):
@@ -157,6 +159,16 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(url)
             return url
         return None
+
+    def get_project_image(self, obj):
+        request = self.context.get('request')
+        if obj.project.image:
+            url = obj.project.image.url
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
+
 
 from rest_framework import serializers
 from accounts.models import User

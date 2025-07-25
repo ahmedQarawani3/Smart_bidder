@@ -88,6 +88,7 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 
+
 User = get_user_model()
 
 # Temporary cache for old instances before saving
@@ -136,37 +137,36 @@ def cache_old_feasibility(sender, instance, **kwargs):
 @receiver(post_save, sender=Project)
 def notify_admin_project_created_or_edited(sender, instance, created, **kwargs):
     if created:
-        message = f"📌 New project awaiting approval: {instance.title}"
+        return  # 🚫 تم تعطيل إرسال إشعار المشروع الجديد
+    
+    old_data = OLD_PROJECTS_CACHE.pop(instance.pk, None)
+    if not old_data:
+        return
+
+    changes = []
+    fields_to_check = ['title', 'description', 'status', 'idea_summary', 'problem_solving', 'category', 'readiness_level']
+
+    for field in fields_to_check:
+        old_value = old_data.get(field)
+        new_value = getattr(instance, field)
+        if old_value != new_value:
+            changes.append(f"✏ Field '{field}' changed from '{old_value}' to '{new_value}'")
+
+    old_image = old_data.get('image')
+    new_image = instance.image.url if instance.image else None
+    if old_image != new_image:
+        changes.append(f"✏ Field 'image' changed from '{old_image}' to '{new_image}'")
+
+    if changes:
+        message = f"🔔 Project '{instance.title}' has been updated and requires approval:\n" + "\n".join(changes)
         for admin in get_admin_users():
             Notification.objects.create(user=admin, message=message)
-    else:
-        old_data = OLD_PROJECTS_CACHE.pop(instance.pk, None)
-        if not old_data:
-            return
 
-        changes = []
-        fields_to_check = ['title', 'description', 'status', 'idea_summary', 'problem_solving', 'category', 'readiness_level']
-
-        for field in fields_to_check:
-            old_value = old_data.get(field)
-            new_value = getattr(instance, field)
-            if old_value != new_value:
-                changes.append(f"✏ Field '{field}' changed from '{old_value}' to '{new_value}'")
-
-        old_image = old_data.get('image')
-        new_image = instance.image.url if instance.image else None
-        if old_image != new_image:
-            changes.append(f"✏ Field 'image' changed from '{old_image}' to '{new_image}'")
-
-        if changes:
-            message = f"🔔 Project '{instance.title}' has been updated and requires approval:\n" + "\n".join(changes)
-            for admin in get_admin_users():
-                Notification.objects.create(user=admin, message=message)
 
 @receiver(post_save, sender=FeasibilityStudy)
 def notify_admin_feasibility_edited(sender, instance, created, **kwargs):
     if created:
-        return  # Optionally notify on creation here if needed
+        return  # يمكن لاحقًا تفعيل إشعار عند الإنشاء
 
     old_data = OLD_FEASIBILITY_CACHE.pop(instance.pk, None)
     if not old_data:
@@ -182,7 +182,7 @@ def notify_admin_feasibility_edited(sender, instance, created, **kwargs):
     for field in fields_to_check:
         old_value = old_data.get(field)
         new_value = getattr(instance, field)
-        if old_value != new_value:
+        if str(old_value) != str(new_value):
             changes.append(f"✏ Field '{field}' changed from '{old_value}' to '{new_value}'")
 
     if changes:
@@ -190,7 +190,6 @@ def notify_admin_feasibility_edited(sender, instance, created, **kwargs):
         message = f"🔔 Feasibility study for project '{project_title}' has been updated:\n" + "\n".join(changes)
         for admin in get_admin_users():
             Notification.objects.create(user=admin, message=message)
-
 
 #يلي فوق كلو وقت يعدل مشروغ
 
