@@ -314,7 +314,7 @@ class SubmitComplaintSerializer(serializers.ModelSerializer):
 
 
 from rest_framework import serializers
-from .models import Project, FeasibilityStudy
+from projectOwner.models import Project, FeasibilityStudy
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:

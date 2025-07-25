@@ -369,7 +369,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import FeasibilityStudy, Project, Notification
+from projectOwner.models import FeasibilityStudy, Project
+from accounts.models import Notification
 from .serializer import (
     FeasibilityStudySerializer,
     ProjectSerializer,
