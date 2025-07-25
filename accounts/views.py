@@ -240,11 +240,8 @@ class ImportantAdminNotificationsView(generics.ListAPIView):
             return Notification.objects.none()
         
         keywords = [
-            "Project created",
-            "Project updated",
-            "new account created",
-            "score reached",
-            
+            "🔔 Project",
+            "🔔 Feasibility study"
         ]
         
         query = reduce(lambda q1, q2: q1 | q2,

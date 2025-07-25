@@ -15,7 +15,7 @@ from .views import (
     SubmitComplaintView,
 )
 from .views import DashboardStatsAPIView
-from .views import AdminApproveProjectUpdateView, AdminRejectProjectUpdateView
+from .views import AdminApproveProjectUpdateView, AdminRejectProjectUpdateView,AdminProjectReviewView
 
 urlpatterns = [
     path('create-investor/', AdminCreateInvestorView.as_view(), name='admin-create-investor'),
@@ -36,5 +36,6 @@ urlpatterns = [
     path('dashboard-stats/', DashboardStatsAPIView.as_view(), name='dashboard-stats'),
     path('admin/project/<int:project_id>/approve-update/', AdminApproveProjectUpdateView.as_view(), name='admin-approve-project-update'),
     path('admin/project/<int:project_id>/reject-update/', AdminRejectProjectUpdateView.as_view(), name='admin-reject-project-update'),
+    path('admin/project/<int:project_id>/reject-update/', AdminProjectReviewView.as_view(), name='admin-reject-project-update'),
 
 ]
