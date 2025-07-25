@@ -364,3 +364,93 @@ class AdminProjectReviewView(APIView):
             notify_user(project.owner.user, f"❌ تم رفض تعديلات مشروعك: {project.title}. الرجاء مراجعته.")
 
         return Response({"detail": f"Project {action}ed successfully."})
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import FeasibilityStudy, Project, Notification
+from .serializer import (
+    FeasibilityStudySerializer,
+    ProjectSerializer,
+    AdminApprovalSerializer,
+)
+import requests
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class FeasibilityStudyViewSet(viewsets.ModelViewSet):
+    queryset = FeasibilityStudy.objects.all()
+    serializer_class = FeasibilityStudySerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self.send_to_ai(instance)
+
+    def send_to_ai(self, instance):
+        project = instance.project
+
+        data = {
+            "title": project.title,
+            "description": project.description,
+            "idea_summary": project.idea_summary,
+            "problem_solving": project.problem_solving,
+            "category": project.category,
+            "readiness_level": project.readiness_level,
+            "funding_required": float(instance.funding_required),
+            "current_revenue": float(instance.current_revenue) if instance.current_revenue else 0.0,
+            "expected_monthly_revenue": instance.expected_monthly_revenue,
+            "expected_profit_margin": instance.expected_profit_margin,
+            "roi_period_months": instance.roi_period_months,
+            "growth_opportunity": instance.growth_opportunity,
+        }
+
+        try:
+            response = requests.post("http://localhost:8005/evaluate-project", json=data)
+            result = response.json()
+
+            instance.ai_score = result.get("score")
+            instance.save(update_fields=["ai_score"])
+
+            message = f"""
+📊 تقييم AI جديد لمشروع: {project.title}
+✅ النتيجة: {result.get("score")}
+💬 التعليق: {result.get("message")}
+"""
+
+            admins = User.objects.filter(is_superuser=True)
+            for admin in admins:
+                Notification.objects.create(
+                    user=admin,
+                    message=message.strip()
+                )
+
+        except Exception as e:
+            print("🔴 فشل تقييم AI:", e)
+
+
+# ✅ API ليقوم الأدمن بالموافقة أو الرفض
+class AdminProjectApprovalAPIView(APIView):
+    def post(self, request, project_id):
+        serializer = AdminApprovalSerializer(data=request.data)
+        if serializer.is_valid():
+            approved = serializer.validated_data['approved']
+            try:
+                project = Project.objects.get(id=project_id)
+                project.status = "active" if approved else "closed"
+                project.save()
+
+                message = f"تم {'الموافقة' if approved else 'رفض'} المشروع: {project.title}"
+                Notification.objects.create(
+                    user=project.owner.user,
+                    message=message
+                )
+
+                return Response({"detail": message}, status=200)
+
+            except Project.DoesNotExist:
+                return Response({"error": "المشروع غير موجود"}, status=404)
+
+        return Response(serializer.errors, status=400)

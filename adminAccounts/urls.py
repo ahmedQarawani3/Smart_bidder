@@ -14,9 +14,14 @@ from .views import (
     ComplaintDetailView,
     SubmitComplaintView,
 )
-from .views import DashboardStatsAPIView
-from .views import AdminApproveProjectUpdateView, AdminRejectProjectUpdateView,AdminProjectReviewView
+from .views import FeasibilityStudyViewSet, AdminProjectApprovalAPIView
 
+from .views import DashboardStatsAPIView
+from .views import AdminApproveProjectUpdateView, AdminRejectProjectUpdateView,AdminProjectReviewView,AdminProjectApprovalAPIView
+router = DefaultRouter()
+from rest_framework.routers import DefaultRouter
+
+router.register(r'feasibility', FeasibilityStudyViewSet, basename='feasibility')
 urlpatterns = [
     path('create-investor/', AdminCreateInvestorView.as_view(), name='admin-create-investor'),
     path('create-owner/', AdminCreateProjectOwnerView.as_view(), name='admin-create-owner'),
@@ -37,5 +42,6 @@ urlpatterns = [
      path('admin/project/<int:project_id>/approve-update/', AdminApproveProjectUpdateView.as_view(), name='admin-approve-project-update'),
     path('admin/project/<int:project_id>/reject-update/', AdminRejectProjectUpdateView.as_view(), name='admin-reject-project-update'),
     path("admin/projects/<int:project_id>/review/", AdminProjectReviewView.as_view()),
+    path('admin/project/<int:project_id>/approve/', AdminProjectApprovalAPIView.as_view(), name='admin-approve'),
 
 ]
