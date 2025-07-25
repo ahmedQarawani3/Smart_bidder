@@ -78,7 +78,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 #هاد تمام عرض العروض المقدمه لصاحب المشروع مع فلاره
 class InvestmentOfferSerializer(serializers.ModelSerializer):
     investor_name = serializers.CharField(source='investor.user.full_name', read_only=True)
-    project_title = serializers.CharField(source='project.title', read_only=True)  # ⬅️ الجديد
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    investor_profile_picture = serializers.SerializerMethodField()  # <-- الحقل الجديد
 
     class Meta:
         model = InvestmentOffer
@@ -90,9 +91,20 @@ class InvestmentOfferSerializer(serializers.ModelSerializer):
             'status',
             'created_at',
             'investor_name',
-            'project_title',  # ⬅️ الجديد
+            'investor_profile_picture',  # <-- ضفت هنا
+            'project_title',
             'project',
         ]
+
+    def get_investor_profile_picture(self, obj):
+        request = self.context.get('request')
+        if obj.investor.profile_picture:
+            url = obj.investor.profile_picture.url
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
+
 
 
 
